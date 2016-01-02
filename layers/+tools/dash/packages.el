@@ -19,7 +19,8 @@
     (defun dash//activate-package-docsets (path)
       "Add dash docsets from specified PATH."
       (setq helm-dash-docsets-path path
-            helm-dash-common-docsets (helm-dash-installed-docsets))
+            helm-dash-common-docsets (helm-dash-installed-docsets)
+            helm-dash-browser-func 'eww)
       (message (format "activated %d docsets from: %s"
                        (length helm-dash-common-docsets) path)))
     (dash//activate-package-docsets dash-helm-dash-docset-path)))
