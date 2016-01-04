@@ -384,26 +384,28 @@ Example: (evil-map visual \"<\" \"<gv\")"
                (evil-select-paren ,start-regex ,end-regex beg end type count t))
              (define-key evil-inner-text-objects-map ,key (quote ,inner-name))
              (define-key evil-outer-text-objects-map ,key (quote ,outer-name))
-             (when (configuration-layer/package-usedp 'evil-surround)
+             (with-eval-after-load 'evil-surround
                (push (cons (string-to-char ,key)
                            (if ,end
                                (cons ,start ,end)
                              ,start))
                      evil-surround-pairs-alist)))))
 
-      (defun spacemacs//standard-text-objects ()
-        ;; between dollars sign:
-        (spacemacs|define-text-object "$" "dollar" "$" "$")
-        ;; define stars
-        (spacemacs|define-text-object "*" "star" "*" "*")
-        ;; define block star text object
-        (spacemacs|define-text-object "8" "block-star" "/*" "*/")
-        ;; between pipe characters:
-        (spacemacs|define-text-object "|" "bar" "|" "|")
-        ;; between percent signs:
-        (spacemacs|define-text-object "%" "percent" "%" "%"))
+      (spacemacs|define-text-object "$" "dollar" "$" "$")
+      (spacemacs|define-text-object "*" "star" "*" "*")
+      (spacemacs|define-text-object "8" "block-star" "/*" "*/")
+      (spacemacs|define-text-object "|" "bar" "|" "|")
+      (spacemacs|define-text-object "%" "percent" "%" "%")
+      (spacemacs|define-text-object "/" "slash" "/" "/")
+      (spacemacs|define-text-object "_" "underscore" "_" "_")
+      (spacemacs|define-text-object "-" "hyphen" "-" "-")
+      (spacemacs|define-text-object "~" "tilde" "~" "~")
+      (spacemacs|define-text-object "=" "equal" "=" "=")
 
-      (spacemacs/add-to-hook 'prog-mode-hook '(spacemacs//standard-text-objects))
+      (evil-define-text-object evil-pasted (count &rest args)
+        (list (save-excursion (evil-goto-mark ?\[) (point))
+              (save-excursion (evil-goto-mark ?\]) (point))))
+      (define-key evil-inner-text-objects-map "P" 'evil-pasted)
 
       ;; define text-object for entire buffer
       (evil-define-text-object evil-inner-buffer (count &optional beg end type)
@@ -542,7 +544,8 @@ Removes the automatic guessing of the initial value based on thing at point. "
             helm-split-window-in-side-p t
             helm-always-two-windows t
             helm-echo-input-in-header-line t
-            helm-imenu-execute-action-at-once-if-one nil)
+            helm-imenu-execute-action-at-once-if-one nil
+            helm-org-format-outline-path t)
 
       ;; hide minibuffer in Helm session, since we use the header line already
       (defun helm-hide-minibuffer-maybe ()
@@ -590,10 +593,9 @@ Removes the automatic guessing of the initial value based on thing at point. "
                           (helm-read-file-name
                            "Search in file(s): "
                            :marked-candidates t
-                           :preselect (and helm-do-grep-preselect-candidate
-                                           (if helm-ff-transformer-show-only-basename
-                                               (helm-basename preselection)
-                                             preselection))))))
+                           :preselect (if helm-ff-transformer-show-only-basename
+                                          (helm-basename preselection)
+                                        preselection)))))
           (helm-do-grep-1 targets nil nil nil nil use-region-or-symbol-p)))
 
       (defun spacemacs/helm-file-do-grep ()
@@ -894,6 +896,8 @@ ARG non nil means that the editing style is `vim'."
         ("?" nil :doc (spacemacs//helm-navigation-ms-full-doc))
         ("a" helm-select-action :post (spacemacs//helm-navigation-ms-set-face))
         ("e" spacemacs/helm-edit)
+        ("g" helm-beginning-of-buffer)
+        ("G" helm-end-of-buffer)
         ("h" helm-previous-source)
         ("j" helm-next-line)
         ("k" helm-previous-line)
@@ -973,7 +977,12 @@ ARG non nil means that the editing style is `vim'."
     :commands (helm-spacemacs helm-spacemacs-faq)
     :init
     (progn
-      (spacemacs/set-leader-keys "feh" 'helm-spacemacs)
+      (defun spacemacs-base/helm-spacemacs-deprecated (arg)
+        "Provide helm-spacemacs with a binding's depreciation message."
+        (interactive "P")
+        (warn "The 'SPC f e h' (or 'M-m f e h') binding is now deprecated and will be remove in the next release. Please use 'SPC h SPC' (or 'M-m h SPC') instead.")
+        (helm-spacemacs arg))
+      (spacemacs/set-leader-keys "feh" 'spacemacs-base/helm-spacemacs-deprecated)
       (spacemacs/set-leader-keys "fef" 'helm-spacemacs-faq)
       (spacemacs/set-leader-keys "h SPC" 'helm-spacemacs))))
 
