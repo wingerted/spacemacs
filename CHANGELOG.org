@@ -1,5 +1,50 @@
 * Release 0.105.x
-** 0.105.0 (2015/01/04)
+** 0.105.3 (2016/01/06)
+*** Hot fixes
+**** Emacs lisp layer
+- Fix wrong hook for adding evil text objects (thanks to justbur)
+**** Ledger
+- Fix missing major mode key bindings (thanks to travisbhartwell)
+**** Ocaml
+- Fix smartparens configuration (thanks to edwintorok)
+*** Layer changes
+**** Spacemacs
+- Improve robustness of =spacemacs/toggle-transparency= function
+  (thanks to justbur)
+*** Other improvements
+- Fix layer install section in all layers READMEs to be more explicit
+  and remove a source of confusion for new comers (thanks to mattbaker)
+- Typos and documentation improvements (thanks to d12frosted)
+** 0.105.2 (2016/01/05)
+- Fix empty mode-line when a new Spacemacs version is available
+  (thanks to TheBB)
+** 0.105.1 (2016/01/05)
+*** Hot fixes
+- Fix and improve support for GUI clients using a server started with
+  =emacs --daemon=:
+  - Fix font
+  - Fix graphical Spaceline separator
+  - Fix theme colors (most of them)
+  - Fix Spacemacs logo in home buffer
+  - Add support for graphical Nyan Cat
+**** Spacemacs layer
+- Fix broken =evil-escape-mode= when toggling =holy-mode= (emacs style)
+**** Bépo layer
+- Fix support for Magit (thanks to StreakyCobra)
+**** Magit layer
+- Fix ~TAB~ key bindings to expand/collapse sections (thanks to justbur)
+**** Scala layer
+- Fix a typo in function name =scala-auto-insert-asterisk-in-comments=
+  (thanks to lunaryorn)
+*** Layer changes
+**** Spacemacs
+- New key binding ~SPC h n~ to browse the Emacs news (thanks to lunaryorn)
+**** Themes megapack
+- Add =monokai= theme (thanks to jonboiser)
+*** Other improvements
+- Typos and documentation improvements (thanks to mjs2600, person808,
+  robbyoconnor, StreakyCobra, TheBB and xfq)
+** 0.105.0 (2016/01/04)
 *** IMPORTANT - Breaking changes
 - ~SPC l~ for =avy-goto-line= is now under ~SPC y~. ~SPC l~ is for
   spacemacs layouts.

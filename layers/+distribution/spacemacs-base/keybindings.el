@@ -97,6 +97,7 @@ Ensure that helm is required before calling FUNC."
 (spacemacs/set-leader-keys "hds" 'spacemacs/describe-system-info)
 (spacemacs||set-helm-key "hdt" describe-theme)
 (spacemacs||set-helm-key "hdv" describe-variable)
+(spacemacs||set-helm-key "hn"  view-emacs-news)
 (spacemacs||set-helm-key "hL"  helm-locate-library)
 ;; search functions -----------------------------------------------------------
 (spacemacs||set-helm-key "sww" helm-wikipedia-suggest)
@@ -554,12 +555,13 @@ otherwise it is scaled down."
   "Toggle between transparent or opaque display."
   (interactive)
   (let* ((frame (selected-frame))
-         (alpha (frame-parameter frame 'alpha)))
+         (alpha (frame-parameter frame 'alpha))
+         (dotfile-setting (cons dotspacemacs-active-transparency
+                                dotspacemacs-inactive-transparency)))
     (set-frame-parameter
      frame 'alpha
-     (if (or (null alpha) (= (cdr-safe alpha) 100))
-         (cons dotspacemacs-active-transparency
-               dotspacemacs-inactive-transparency)
+     (if (not (equal alpha dotfile-setting))
+         dotfile-setting
        '(100 . 100))))
   ;; Immediately enter the micro-state, but also keep toggle
   ;; accessible from helm-spacemacs

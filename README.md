@@ -136,11 +136,8 @@ the start of this file. That will populate your `~/.emacs.d` directory, which
 is what transforms a regular Emacs into Spacemacs.
 
 *After* you have completed the [install process below](#install), it is also
- recommended to add the [osx layer][] to your [dotfile][]:
-
-```elisp
-(setq-default dotspacemacs-configuration-layers '(osx))
-```
+ recommended to add the [osx layer][] to your [dotfile][]. Install instructions
+ are available in the [osx layer][] documentation.
 
 Note that the `emacs-mac-port` server behaves differently than the regular Emacs
 server which in particular **DOES NOT** allow multi-tty if you start GUI i.e.
@@ -199,6 +196,12 @@ For efficient searches we recommend to install `pt` ([the platinum searcher][]).
    manually.
 
 3. Launch Emacs. Spacemacs will automatically install the packages it requires.
+   If you get an error regarding package downloads then you may try to disable
+   HTTPS protocol by starting Emacs with
+
+   ```sh
+   emacs --insecure
+   ```
 
 4. Restart Emacs to complete the installation.
 
@@ -243,7 +246,7 @@ git reset --hard <tag version which you are updating to>
 
 ## On develop branch
 
-1. Update Emacs packages by clicking (press `RET`) on the `[Update]` link of
+1. Update Emacs packages by clicking (press `RET`) on the `[Update Packages]` link of
 the starting page.
 
 2. Close Emacs and update the git repository:
@@ -262,6 +265,10 @@ branch, for instance to revert to the last `0.103`:
    ```sh
    git checkout origin/release-0.103
    ```
+
+**After you update, either manually, or automatically, you are advised to update
+  your packages by clicking the `[Update Packages]` button on the Spacemacs Home
+  Buffer.**
 
 # Contributions
 
