@@ -1,7 +1,6 @@
 ;;; packages.el --- Python Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -284,11 +283,12 @@
   (use-package hy-mode
     :defer t))
 
-(defun python/init-helm-pydoc ()
-  (use-package helm-pydoc
-    :defer t
-    :init
-    (spacemacs/set-leader-keys-for-major-mode 'python-mode "hd" 'helm-pydoc)))
+(when (configuration-layer/layer-usedp 'spacemacs-helm)
+  (defun python/init-helm-pydoc ()
+    (use-package helm-pydoc
+      :defer t
+      :init
+      (spacemacs/set-leader-keys-for-major-mode 'python-mode "hd" 'helm-pydoc))))
 
 (defun python/post-init-smartparens ()
   (defadvice python-indent-dedent-line-backspace
@@ -334,7 +334,8 @@ fix this issue."
     :post-init
     (spacemacs/set-leader-keys-for-major-mode 'python-mode "gi" 'cscope/run-pycscope)))
 
-(defun python/pre-init-helm-cscope ()
-  (spacemacs|use-package-add-hook xcscope
-    :post-init
-    (spacemacs/setup-helm-cscope 'python-mode)))
+(when (configuration-layer/layer-usedp 'spacemacs-helm)
+  (defun python/pre-init-helm-cscope ()
+    (spacemacs|use-package-add-hook xcscope
+      :post-init
+      (spacemacs/setup-helm-cscope 'python-mode))))

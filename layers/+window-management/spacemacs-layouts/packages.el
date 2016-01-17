@@ -1,7 +1,6 @@
 ;;; packages.el --- Spacemacs Layouts Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -16,7 +15,9 @@
                                       :repo "syl20bnr/persp-mode.el"
                                       :branch "fix-emacsclient-crash"))
         spaceline
-        eyebrowse))
+        eyebrowse
+        helm
+        swiper))
 
 (defun spacemacs-layouts/init-persp-mode ()
   (use-package persp-mode
@@ -313,3 +314,11 @@ format so they are supported by the
   (add-hook 'persp-before-switch-functions #'spacemacs/update-eyebrowse-for-perspective)
   (add-hook 'eyebrowse-post-window-switch-hook #'spacemacs/save-eyebrowse-for-perspective)
   (add-hook 'persp-activated-hook #'spacemacs/load-eyebrowse-for-perspective))
+
+(defun spacemacs-layouts/post-init-helm ()
+  (spacemacs/set-leader-keys
+    "pl" 'spacemacs/helm-persp-switch-project))
+
+(defun spacemacs-layouts/post-init-swiper ()
+  (spacemacs/set-leader-keys
+    "pl" 'spacemacs/ivy-persp-switch-project))

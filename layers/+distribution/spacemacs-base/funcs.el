@@ -1,7 +1,6 @@
 ;;; funcs.el --- Spacemacs Base Layer functions File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -65,11 +64,16 @@
 
 (defun spacemacs/jump-in-buffer ()
   (interactive)
-  (cond
-   ((eq major-mode 'org-mode)
-    (call-interactively 'helm-org-in-buffer-headings))
-   (t
-    (call-interactively 'helm-semantic-or-imenu))))
+  (call-interactively
+   (cond
+    ((and (configuration-layer/layer-usedp 'spacemacs-helm)
+          (eq major-mode 'org-mode))
+     'helm-org-in-buffer-headings)
+    ((configuration-layer/layer-usedp 'spacemacs-helm)
+     'helm-semantic-or-imenu)
+    ((configuration-layer/layer-usedp 'spacemacs-ivy)
+     'counsel-imenu)
+    (t 'imenu))))
 
 (defun spacemacs/split-and-new-line ()
   "Split a quoted string or s-expression and insert a new line with
@@ -864,7 +868,10 @@ is nonempty."
 (defun spacemacs/switch-to-scratch-buffer ()
   "Switch to the `*scratch*' buffer. Create it first if needed."
   (interactive)
-  (switch-to-buffer (get-buffer-create "*scratch*")))
+  (switch-to-buffer (get-buffer-create "*scratch*"))
+  (when (and (not (eq major-mode dotspacemacs-scratch-mode))
+             (fboundp dotspacemacs-scratch-mode))
+    (funcall dotspacemacs-scratch-mode)))
 
 ;; http://stackoverflow.com/questions/11847547/emacs-regexp-count-occurrences
 (defun how-many-str (regexp str)

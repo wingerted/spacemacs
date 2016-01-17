@@ -1,7 +1,6 @@
 ;;; keybindings.el --- Spacemacs Base Layer key-bindings File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -75,33 +74,6 @@
   "bw"  'read-only-mode)
 ;; Cycling settings -----------------------------------------------------------
 (spacemacs/set-leader-keys "Tn" 'spacemacs/cycle-spacemacs-theme)
-;; describe functions ---------------------------------------------------------
-(defmacro spacemacs||set-helm-key (keys func)
-  "Define a key bindings for FUNC using KEYS.
-Ensure that helm is required before calling FUNC."
-  (let ((func-name (intern (format "spacemacs/%s" (symbol-name func)))))
-    `(progn
-       (defun ,func-name ()
-         ,(format "Wrapper to ensure that `helm' is loaded before calling %s."
-                  (symbol-name func))
-         (interactive)
-         (require 'helm)
-         (call-interactively ',func))
-       (spacemacs/set-leader-keys ,keys ',func-name))))
-(spacemacs||set-helm-key "hdb" describe-bindings)
-(spacemacs||set-helm-key "hdc" describe-char)
-(spacemacs||set-helm-key "hdf" describe-function)
-(spacemacs||set-helm-key "hdk" describe-key)
-(spacemacs||set-helm-key "hdm" describe-mode)
-(spacemacs||set-helm-key "hdp" describe-package)
-(spacemacs/set-leader-keys "hds" 'spacemacs/describe-system-info)
-(spacemacs||set-helm-key "hdt" describe-theme)
-(spacemacs||set-helm-key "hdv" describe-variable)
-(spacemacs||set-helm-key "hn"  view-emacs-news)
-(spacemacs||set-helm-key "hL"  helm-locate-library)
-;; search functions -----------------------------------------------------------
-(spacemacs||set-helm-key "sww" helm-wikipedia-suggest)
-(spacemacs||set-helm-key "swg" helm-google-suggest)
 ;; errors ---------------------------------------------------------------------
 (spacemacs/set-leader-keys
   "en" 'spacemacs/next-error
@@ -130,6 +102,19 @@ Ensure that helm is required before calling FUNC."
   "fvf" 'add-file-local-variable
   "fvp" 'add-file-local-variable-prop-line
   "fy" 'spacemacs/show-and-copy-buffer-filename)
+;; help -----------------------------------------------------------------------
+(spacemacs/set-leader-keys
+  "hdb" 'describe-bindings
+  "hdc" 'describe-char
+  "hdd" 'helm-apropos
+  "hdf" 'describe-function
+  "hdk" 'describe-key
+  "hdl" 'spacemacs/describe-last-keys
+  "hdp" 'describe-package
+  "hds" 'spacemacs/describe-system-info
+  "hdt" 'describe-theme
+  "hdv" 'describe-variable
+  "hn"  'view-emacs-news)
 ;; insert stuff ---------------------------------------------------------------
 (spacemacs/set-leader-keys
   "iJ" 'spacemacs/insert-line-below-no-indent
@@ -142,7 +127,7 @@ Ensure that helm is required before calling FUNC."
 (spacemacs/set-leader-keys
   "jo" 'open-line
   "j=" 'spacemacs/indent-region-or-buffer
-  "jJ" 'spacemacs/split-and-new-line
+  "jS" 'spacemacs/split-and-new-line
   "jk" 'spacemacs/evil-goto-next-line-and-indent)
 
 ;; navigation/jumping ---------------------------------------------------------
@@ -154,7 +139,6 @@ Ensure that helm is required before calling FUNC."
   "jD" 'dired-jump-other-window
   "jf" 'find-function-at-point
   "ji" 'spacemacs/jump-in-buffer
-  "jI" 'helm-imenu-in-all-buffers
   "jv" 'find-variable-at-point)
 
 ;; Compilation ----------------------------------------------------------------
@@ -571,7 +555,7 @@ otherwise it is scaled down."
          dotfile-setting
        '(100 . 100))))
   ;; Immediately enter the micro-state, but also keep toggle
-  ;; accessible from helm-spacemacs
+  ;; accessible from helm-spacemacs-help
   (spacemacs/scale-transparency-micro-state))
 
 (defun spacemacs/increase-transparency ()

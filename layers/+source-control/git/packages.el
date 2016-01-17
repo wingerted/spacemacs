@@ -1,7 +1,6 @@
 ;;; packages.el --- Git Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -35,10 +34,11 @@
       (evil-define-key 'motion magit-mode-map
         (kbd dotspacemacs-leader-key) spacemacs-default-map))))
 
-(defun git/init-helm-gitignore ()
-  (use-package helm-gitignore
-    :defer t
-    :init (spacemacs/set-leader-keys "gI" 'helm-gitignore)))
+(when (configuration-layer/layer-usedp 'spacemacs-helm)
+  (defun git/init-helm-gitignore ()
+    (use-package helm-gitignore
+      :defer t
+      :init (spacemacs/set-leader-keys "gI" 'helm-gitignore))))
 
 (defun git/init-git-commit ()
   (use-package git-commit
@@ -105,8 +105,11 @@
                magit-status)
     :init
     (progn
-      (setq magit-completing-read-function 'magit-builtin-completing-read
-            magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
+      (setq magit-completing-read-function
+            (if (configuration-layer/layer-usedp 'spacemacs-ivy)
+                'ivy-completing-read
+              'magit-builtin-completing-read))
+      (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
       (add-hook 'git-commit-mode-hook 'fci-mode)
       ;; On Windows, we must use Git GUI to enter username and password
       ;; See: https://github.com/magit/magit/wiki/FAQ#windows-cannot-push-via-https

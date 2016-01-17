@@ -1,6 +1,6 @@
 ;;; holy-mode.el --- Enter the church of Emacs
 
-;; Copyright (C) 2014-2015 syl20bnr
+;; Copyright (C) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; Keywords: convenience editing
@@ -51,10 +51,10 @@ before it was disabled.")
           (when (boundp (car mode)) (funcall (car mode) -1)))
         (setq cursor-type 'box)
         (set-cursor-color "SkyBlue2")
-        (when (fboundp 'spacemacs//helm-hjkl-navigation)
-          (spacemacs//helm-hjkl-navigation nil)))
-    (when (fboundp 'spacemacs//helm-hjkl-navigation)
-      (spacemacs//helm-hjkl-navigation t))
+        (when (fboundp 'spacemacs//hjkl-completion-navigation)
+          (spacemacs//hjkl-completion-navigation nil)))
+    (when (fboundp 'spacemacs//hjkl-completion-navigation)
+      (spacemacs//hjkl-completion-navigation t))
     (dolist (mode holy-mode-modes-to-disable-alist)
       (when (boundp (car mode))
         (funcall (car mode) (cdr mode))))))

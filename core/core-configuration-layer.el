@@ -1,7 +1,6 @@
 ;;; core-configuration-layer.el --- Spacemacs Core File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -264,8 +263,12 @@ layer directory."
             (candidates . ,(append current-layer-paths
                                    (list other-choice)))
             (action . (lambda (c) c))))
-         (layer-path-sel (helm :sources helm-lp-source
-                               :prompt "Configuration layer path: "))
+         (layer-path-sel (if (configuration-layer/layer-usedp 'spacemacs-ivy)
+                             (ivy-read "Configuration layer path: "
+                                       (append current-layer-paths
+                                               (list other-choice)))
+                           (helm :sources helm-lp-source
+                                 :prompt "Configuration layer path: ")))
          (layer-path (cond
                       ((string-equal layer-path-sel other-choice)
                        (read-directory-name (concat "Other configuration "
@@ -284,9 +287,9 @@ layer directory."
                        "this layer already exists.") name))
      (t
       (make-directory layer-dir t)
-      (configuration-layer//copy-template name "extensions.el" layer-dir)
       (configuration-layer//copy-template name "packages.el" layer-dir)
-      (configuration-layer//copy-template name "README.org" layer-dir)
+      (when (y-or-n-p "Create readme?")
+        (configuration-layer//copy-template name "README.org" layer-dir))
       (message "Configuration layer \"%s\" successfully created." name)))))
 
 (defun configuration-layer/make-layer (layer)
@@ -346,7 +349,7 @@ Properties that can be copied are `:location', `:step' and `:excluded'."
         ;; packages
         (when (file-exists-p packages-file)
           ;; required for lazy-loading of unused layers
-          ;; for instance for helm-spacemacs
+          ;; for instance for helm-spacemacs-help
           (eval `(defvar ,(intern (format "%S-packages" name)) nil))
           (unless (configuration-layer/layer-usedp name)
             (load packages-file))
@@ -390,7 +393,7 @@ Properties that can be copied are `:location', `:step' and `:excluded'."
         ;; TODO remove extensions in 0.106.0
         (when (file-exists-p extensions-file)
           ;; required for lazy-loading of unused layers
-          ;; for instance for helm-spacemacs
+          ;; for instance for helm-spacemacs-help
           (unless (configuration-layer/layer-usedp name)
             (load extensions-file))
           (dolist (step '(pre post))
@@ -475,20 +478,28 @@ Properties that can be copied are `:location', `:step' and `:excluded'."
 (defun configuration-layer//copy-template (name template &optional layer-dir)
   "Copy and replace special values of TEMPLATE to layer string NAME.
 If LAYER_DIR is nil, the private directory is used."
-  (let ((src (concat configuration-layer-template-directory
-                     (format "%s.template" template)))
-        (dest (if layer-dir
-                  (concat layer-dir "/" (format "%s" template))
-                (concat (configuration-layer//get-private-layer-dir name)
-                        (format "%s" template)))))
-    (copy-file src dest)
-    (find-file dest)
-    (save-excursion
-      (goto-char (point-min))
-      (let ((case-fold-search nil))
-        (while (re-search-forward "%LAYERNAME%" nil t)
-          (replace-match name t))))
-    (save-buffer)))
+  (cl-flet ((substitute (old new) (let ((case-fold-search nil))
+                                    (save-excursion
+                                      (goto-char (point-min))
+                                      (while (search-forward old nil t)
+                                        (replace-match new t))))))
+    (let ((src (concat configuration-layer-template-directory
+                       (format "%s.template" template)))
+          (dest (if layer-dir
+                    (concat layer-dir "/" (format "%s" template))
+                  (concat (configuration-layer//get-private-layer-dir name)
+                          (format "%s" template)))))
+      (copy-file src dest)
+      (find-file dest)
+      (substitute "%LAYER_NAME%" name)
+      (cond
+       (user-full-name
+        (substitute "%USER_FULL_NAME%" user-full-name)
+        (substitute "%USER_MAIL_ADDRESS%" user-mail-address))
+       (t
+        (substitute "%USER_FULL_NAME%" "Sylvain Benner & Contributors")
+        (substitute "%USER_MAIL_ADDRESS%" "sylvain.benner@gmail.com")))
+      (save-buffer))))
 
 (defun configuration-layer//directory-type (path)
   "Return the type of directory pointed by PATH.
@@ -599,7 +610,7 @@ path."
         configuration-layer--layers))
 
 (defun configuration-layer/declare-layers (layer-names)
-  "Add layer with LAYER-NAMES to used layers."
+  "Add layers with LAYER-NAMES to used layers."
   (mapc 'configuration-layer/declare-layer layer-names))
 
 (defun configuration-layer/declare-layer (layer-name)
@@ -608,6 +619,16 @@ path."
     (let ((new-layer (configuration-layer/make-layer layer-name)))
       (push new-layer configuration-layer--layers)
       (configuration-layer//configure-layer new-layer))))
+
+(defun configuration-layer/remove-layers (layer-names)
+  "Remove layers with LAYER-NAMES from used layers."
+  (mapc 'configuration-layer/remove-layer layer-names))
+
+(defun configuration-layer/remove-layer (layer-name)
+  "Remove an used layer with name LAYER-NAME."
+  (setq configuration-layer--layers
+        (delete (object-assoc layer-name :name configuration-layer--layers)
+                configuration-layer--layers)))
 
 (defun configuration-layer//set-layers-variables (layers)
   "Set the configuration variables for the passed LAYERS."
@@ -622,7 +643,7 @@ path."
             (condition-case err
                 (set-default var (eval (pop variables)))
               ('error
-               (configuration-layer//set-error)
+               (configuration-layer//increment-error-count)
                (spacemacs-buffer/append
                 (format (concat "\nAn error occurred while setting layer "
                                 "variable %s "
@@ -726,7 +747,7 @@ path."
                  (t (spacemacs-buffer/warning "Cannot install package %S."
                                               pkg-name)))
               ('error
-               (configuration-layer//set-error)
+               (configuration-layer//increment-error-count)
                (spacemacs-buffer/append
                 (format (concat "\nAn error occurred while installing %s "
                                 "(error: %s)\n") pkg-name err))))))
@@ -893,7 +914,7 @@ path."
               (condition-case err
                   (funcall (intern (format "%S/pre-init-%S" layer pkg-name)))
                 ('error
-                 (configuration-layer//set-error)
+                 (configuration-layer//increment-error-count)
                  (spacemacs-buffer/append
                   (format
                    (concat "\nAn error occurred while pre-configuring %S "
@@ -913,7 +934,7 @@ path."
               (condition-case err
                   (funcall (intern (format "%S/post-init-%S" layer pkg-name)))
                 ('error
-                 (configuration-layer//set-error)
+                 (configuration-layer//increment-error-count)
                  (spacemacs-buffer/append
                   (format
                    (concat "\nAn error occurred while post-configuring %S "
@@ -943,8 +964,7 @@ path."
 If called with a prefix argument ALWAYS-UPDATE, assume yes to update."
   (interactive "P")
   (spacemacs-buffer/insert-page-break)
-  (spacemacs-buffer/append (concat "\nUpdating Emacs packages from remote "
-                                   "repositories (ELPA, MELPA, etc.)...\n"))
+  (spacemacs-buffer/append "\nUpdating package archives, please wait...\n")
   (configuration-layer/retrieve-package-archives nil 'force)
   (setq configuration-layer--skipped-packages nil)
   (let* ((update-packages
@@ -968,48 +988,53 @@ If called with a prefix argument ALWAYS-UPDATE, assume yes to update."
                           configuration-layer--skipped-packages
                           " "))))
     ;; (message "packages to udpate: %s" update-packages)
-    (if (> upgrade-count 0)
-        (if (and (not always-update)
-                 (not (yes-or-no-p (format (concat "%s package(s) to update, "
-                                                   (if (> skipped-count 0)
-                                                       (format "%s package(s) skipped, "
-                                                               skipped-count)
-                                                     "")
-                                                   "do you want to continue ? ")
-                                           upgrade-count))))
-            (spacemacs-buffer/append
-             "Packages update has been cancelled.\n")
-          ;; backup the package directory and construct an alist
-          ;; variable to be cached for easy update and rollback
-          (spacemacs-buffer/append
-           "--> performing backup of package(s) to update...\n" t)
+    (when (> upgrade-count 0)
+      (spacemacs-buffer/append
+       (format (concat "--> Found %s package(s) to update"
+                       (if (> skipped-count 0)
+                           (format " (skipped %s):\n" skipped-count)
+                         ":\n"))
+               upgrade-count) t)
+      (mapc (lambda (x)
+              (spacemacs-buffer/append (format "%s\n" x) t))
+            (sort (mapcar 'symbol-name update-packages) 'string<))
+      (if (and (not always-update)
+               (not (yes-or-no-p
+                     (format "Do you want to update %s package(s) ? "
+                             upgrade-count))))
+          (spacemacs-buffer/append "Packages update has been cancelled.\n" t)
+        ;; backup the package directory and construct an alist
+        ;; variable to be cached for easy update and rollback
+        (spacemacs-buffer/append
+         "--> performing backup of package(s) to update...\n" t)
+        (spacemacs//redisplay)
+        (dolist (pkg update-packages)
+          (let* ((src-dir (configuration-layer//get-package-directory pkg))
+                 (dest-dir (expand-file-name
+                            (concat rollback-dir
+                                    (file-name-as-directory
+                                     (file-name-nondirectory src-dir))))))
+            (copy-directory src-dir dest-dir 'keeptime 'create 'copy-content)
+            (push (cons pkg (file-name-nondirectory src-dir))
+                  update-packages-alist)))
+        (spacemacs/dump-vars-to-file
+         '(update-packages-alist)
+         (expand-file-name (concat rollback-dir
+                                   configuration-layer-rollback-info)))
+        (dolist (pkg update-packages)
+          (setq upgraded-count (1+ upgraded-count))
+          (spacemacs-buffer/replace-last-line
+           (format "--> preparing update of package %s... [%s/%s]"
+                   pkg upgraded-count upgrade-count) t)
           (spacemacs//redisplay)
-          (dolist (pkg update-packages)
-            (let* ((src-dir (configuration-layer//get-package-directory pkg))
-                   (dest-dir (expand-file-name
-                              (concat rollback-dir
-                                      (file-name-as-directory
-                                       (file-name-nondirectory src-dir))))))
-              (copy-directory src-dir dest-dir 'keeptime 'create 'copy-content)
-              (push (cons pkg (file-name-nondirectory src-dir))
-                    update-packages-alist)))
-          (spacemacs/dump-vars-to-file
-           '(update-packages-alist)
-           (expand-file-name (concat rollback-dir
-                                     configuration-layer-rollback-info)))
-          (dolist (pkg update-packages)
-            (setq upgraded-count (1+ upgraded-count))
-            (spacemacs-buffer/replace-last-line
-             (format "--> preparing update of package %s... [%s/%s]"
-                     pkg upgraded-count upgrade-count) t)
-            (spacemacs//redisplay)
-            (configuration-layer//package-delete pkg))
-          (spacemacs-buffer/append
-           (format "\n--> %s package(s) to be updated.\n" upgraded-count))
-          (spacemacs-buffer/append
-           "\nEmacs has to be restarted to actually install the new packages.\n")
-          (configuration-layer//cleanup-rollback-directory)
-          (spacemacs//redisplay))
+          (configuration-layer//package-delete pkg))
+        (spacemacs-buffer/append
+         (format "\n--> %s package(s) to be updated.\n" upgraded-count))
+        (spacemacs-buffer/append
+         "\nEmacs has to be restarted to actually install the new packages.\n")
+        (configuration-layer//cleanup-rollback-directory)
+        (spacemacs//redisplay)))
+    (when (eq upgrade-count 0)
       (spacemacs-buffer/append "--> All packages are up to date.\n")
       (spacemacs//redisplay))))
 
@@ -1269,12 +1294,10 @@ to select one."
           (spacemacs-buffer/append "\n"))
       (spacemacs-buffer/message "No orphan package to delete."))))
 
-(defun configuration-layer//set-error ()
-  "Set the error flag and change the mode-line color to red."
+(defun configuration-layer//increment-error-count ()
+  "Increment the error counter."
   (if configuration-layer-error-count
-      (setq configuration-layer-error-count
-            (1+ configuration-layer-error-count))
-    (face-remap-add-relative 'mode-line '((:background "red") mode-line))
+      (setq configuration-layer-error-count (1+ configuration-layer-error-count))
     (setq configuration-layer-error-count 1)))
 
 (provide 'core-configuration-layer)

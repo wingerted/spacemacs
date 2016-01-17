@@ -1,7 +1,6 @@
 ;;; core-dotspacemacs.el --- Spacemacs Core File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -83,6 +82,9 @@ banner, `random' chooses a random text banner in `core/banners'
 directory. A string value must be a path to a .PNG file.
 If the value is nil then no banner is displayed.")
 
+(defvar dotspacemacs-scratch-mode 'text-mode
+  "Default major mode of the scratch buffer.")
+
 (defvar dotspacemacs-check-for-update t
   "If non nil then spacemacs will check for updates at startup
 when the current branch is not `develop'")
@@ -137,8 +139,11 @@ emacs.")
   "Default font. `powerline-scale' allows to quickly tweak the mode-line
 size to make separators look not too crappy.")
 
-(defvaralias 'dotspacemacs-remap-Y-to-y$ 'evil-want-Y-yank-to-eol
-  "If non nil `Y' is remapped to `y$'.")
+(defvar dotspacemacs-remap-Y-to-y$ nil
+  "If non nil `Y' is remapped to `y$' in Evil states.")
+
+(defvar dotspacemacs-ex-substitute-global nil
+  "If non nil, inverse the meaning of `g' in `:substitute' Evil ex-command.")
 
 (defvar dotspacemacs-default-layout-name "Default"
   " Name of the default layout.")
@@ -280,7 +285,7 @@ are caught and signalled to user in spacemacs buffer."
        (condition-case-unless-debug err
            (,func)
          (error
-          (configuration-layer//set-error)
+          (configuration-layer//increment-error-count)
           (spacemacs-buffer/append (format "Error in %s: %s\n"
                                            ',(symbol-name func)
                                            (error-message-string err))
@@ -382,7 +387,7 @@ If ARG is non nil then Ask questions to the user before installing the dotfile."
               ,(format
                 "dotspacemacs-editing-style '%S"
                 (dotspacemacs//ido-completing-read
-                 "What is your preferred style? "
+                 "What is your preferred editing style? "
                  '(("Among the stars aboard the Evil flagship (vim)"
                     vim)
                    ("On the planet Emacs in the Holy control tower (emacs)"
@@ -392,13 +397,24 @@ If ARG is non nil then Ask questions to the user before installing the dotfile."
                 "dotspacemacs-distribution '%S"
                 (dotspacemacs//ido-completing-read
                  "What distribution of spacemacs would you like to start with? "
-                 '(("The standard distribution, recommended. (spacemacs)"
+                 `(("The standard distribution, recommended (spacemacs)"
                     spacemacs)
-                   ("A minimalist distribution that you can build on. (spacemacs-base)"
-                    spacemacs-base)))))))))
+                   (,(concat "A minimalist distribution that you can build on "
+                             "(spacemacs-base)")
+                    spacemacs-base)))))
+             ("spacemacs-helm"
+              ,(dotspacemacs//ido-completing-read
+                "What type of completion framework do you want? "
+                '(("An heavy one but full-featured (helm)"
+                   "spacemacs-helm")
+                  ("A lighter one but still very powerful (ivy)"
+                   "spacemacs-ivy")
+                  ;; For now, None works only if the user selected
+                  ;; the spacemacs-base distribution
+                  ("None (not recommended)" ""))))))))
     (with-current-buffer (find-file-noselect
-                       (concat dotspacemacs-template-directory
-                               ".spacemacs.template"))
+                          (concat dotspacemacs-template-directory
+                                  ".spacemacs.template"))
       (dolist (p preferences)
         (goto-char (point-min))
         (re-search-forward (car p))

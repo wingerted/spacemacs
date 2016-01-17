@@ -1,7 +1,6 @@
 ;;; extensions.el --- Games Layer Extensions File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -44,7 +43,8 @@
         "l" 'tetris-move-right
         "q" 'spacemacs/tetris-quit-game))))
 
-(defun games/init-helm-games ()
-  (use-package helm-games
-    :commands helm-games
-    :init (spacemacs/set-leader-keys "aG" 'helm-games)))
+(when (configuration-layer/layer-usedp 'spacemacs-helm)
+  (defun games/init-helm-games ()
+    (use-package helm-games
+      :commands helm-games
+      :init (spacemacs/set-leader-keys "aG" 'helm-games))))

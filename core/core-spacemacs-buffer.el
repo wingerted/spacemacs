@@ -1,7 +1,6 @@
 ;;; core-spacemacs-buffer.el --- Spacemacs Core File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -37,6 +36,7 @@ version the release note it displayed")
     (define-key map [backtab] 'widget-backward)
     (define-key map (kbd "RET") 'widget-button-press)
     (define-key map [down-mouse-1] 'widget-button-click)
+    (define-key map "q" 'quit-window)
     map)
   "Keymap for spacemacs buffer mode.")
 
@@ -505,12 +505,19 @@ HPADDING is the horizontal spacing betwee the content line and the frame border.
                  :follow-link "\C-m"
                  )
   (insert " ")
-  (widget-create 'url-link
-                 :tag (propertize "Search in Spacemacs" 'face 'font-lock-function-name-face)
-                 :help-echo "Find Spacemacs package and layer configs using helm-spacemacs."
-                 :action (lambda (&rest ignore) (call-interactively 'helm-spacemacs))
-                 :mouse-face 'highlight
-                 :follow-link "\C-m")
+  (if (configuration-layer/layer-usedp 'spacemacs-helm)
+      (widget-create 'url-link
+                     :tag (propertize "Search in Spacemacs" 'face 'font-lock-function-name-face)
+                     :help-echo "Find Spacemacs package and layer configs using helm-spacemacs-help."
+                     :action (lambda (&rest ignore) (call-interactively 'helm-spacemacs-help))
+                     :mouse-face 'highlight
+                     :follow-link "\C-m")
+    (widget-create 'url-link
+                   :tag (propertize "Search in Spacemacs" 'face 'font-lock-function-name-face)
+                   :help-echo "Find Spacemacs package and layer configs using helm-spacemacs-help."
+                   :action (lambda (&rest ignore) (call-interactively 'ivy-spacemacs-help))
+                   :mouse-face 'highlight
+                   :follow-link "\C-m"))
   (insert "\n\n"))
 
 (defun spacemacs-buffer//insert-file-list (list-display-name list)
@@ -559,7 +566,8 @@ HPADDING is the horizontal spacing betwee the content line and the frame border.
                   (spacemacs//insert--shortcut "r" "Recent Files:")
                   (insert list-separator)))
                ((eq el 'bookmarks)
-                (helm-mode)
+                (when (configuration-layer/layer-usedp 'spacemacs-helm) (helm-mode))
+                (require 'bookmark)
                 (when (spacemacs-buffer//insert-bookmark-list "Bookmarks:" (bookmark-all-names))
                   (spacemacs//insert--shortcut "b" "Bookmarks:")
                   (insert list-separator)))
@@ -596,20 +604,26 @@ already exist, and switch to it."
               (spacemacs-buffer/set-mode-line spacemacs--default-mode-line)
               (force-mode-line-update)
               (spacemacs-buffer-mode))
-          (add-hook 'emacs-startup-hook
-                    (lambda ()
-                      (with-current-buffer (get-buffer spacemacs-buffer-name)
-                        (when dotspacemacs-startup-lists
-                          (spacemacs-buffer/insert-startupify-lists))
-                        (if configuration-layer-error-count
-                            (spacemacs-buffer/set-mode-line
-                             (format (concat "%s error(s) at startup! "
-                                             "Spacemacs may not be able to operate properly.")
-                                     configuration-layer-error-count))
-                          (spacemacs-buffer/set-mode-line spacemacs--default-mode-line))
-                        (force-mode-line-update)
-                        (spacemacs-buffer-mode)
-                        (spacemacs-buffer/goto-link-line))) t)))))
+          (add-hook
+           'emacs-startup-hook
+           (lambda ()
+             (with-current-buffer (get-buffer spacemacs-buffer-name)
+               (when dotspacemacs-startup-lists
+                 (spacemacs-buffer/insert-startupify-lists))
+               (if configuration-layer-error-count
+                   (progn
+                     (spacemacs-buffer-mode)
+                     (spacemacs-buffer/set-mode-line
+                      (format
+                       (concat "%s error(s) at startup! "
+                               "Spacemacs may not be able to operate properly.")
+                       configuration-layer-error-count))
+                     (face-remap-add-relative 'mode-line
+                                              '((:background "red") mode-line)))
+                 (spacemacs-buffer/set-mode-line spacemacs--default-mode-line)
+                 (spacemacs-buffer-mode))
+               (force-mode-line-update)
+               (spacemacs-buffer/goto-link-line))) t)))))
   (spacemacs-buffer/goto-link-line)
   (switch-to-buffer spacemacs-buffer-name)
   (spacemacs//redisplay))
