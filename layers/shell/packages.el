@@ -59,6 +59,7 @@ the user activate the completion manually."
     :defer t
     :init
     (progn
+      (spacemacs/register-repl 'eshell 'eshell)
       (setq eshell-cmpl-cycle-completions nil
             ;; auto truncate after 20k lines
             eshell-buffer-maximum-lines 20000
@@ -108,7 +109,12 @@ is achieved by adding the relevant text properties."
           (add-hook 'evil-insert-state-entry-hook
                     'spacemacs//eshell-auto-end nil t))
         (when (configuration-layer/package-usedp 'semantic)
-          (semantic-mode -1)))
+          (semantic-mode -1))
+        ;; Caution! this will erase buffer's content at C-l
+        (define-key eshell-mode-map (kbd "C-l") 'eshell/clear)
+        (define-key eshell-mode-map (kbd "C-d") 'eshell-delchar-or-maybe-eof))
+
+      (autoload 'eshell-delchar-or-maybe-eof "em-rebind")
 
       ;; Defining a function like this makes it possible to type 'clear' in eshell and have it work
       (defun eshell/clear ()
@@ -117,11 +123,6 @@ is achieved by adding the relevant text properties."
           (erase-buffer))
         (eshell-send-input))
 
-      ;; Caution! this will erase buffer's content at C-l
-      (add-hook 'eshell-mode-hook
-         #'(lambda ()
-             (define-key eshell-mode-map (kbd "C-l") 'eshell/clear)
-             (define-key eshell-mode-map (kbd "C-d") 'eshell-life-is-too-much)))
       (add-hook 'eshell-mode-hook 'spacemacs//init-eshell))
     :config
     (progn
@@ -209,6 +210,7 @@ is achieved by adding the relevant text properties."
     :defer t
     :init
     (progn
+      (spacemacs/register-repl 'multi-term 'multi-term)
       (spacemacs/set-leader-keys "ast" 'shell-pop-multi-term)
       (defun multiterm (_)
         "Wrapper to be able to call multi-term from shell-pop"
@@ -250,6 +252,7 @@ is achieved by adding the relevant text properties."
         (setq eshell-output-filter-functions (remove 'eshell-handle-ansi-color eshell-output-filter-functions))))))
 
 (defun shell/init-shell ()
+  (spacemacs/register-repl 'shell 'shell)
   (defun shell-comint-input-sender-hook ()
     "Check certain shell commands.
  Executes the appropriate behavior for certain commands."
@@ -329,6 +332,8 @@ is achieved by adding the relevant text properties."
                             term-mode-hook)))
 
 (defun shell/init-term ()
+  (spacemacs/register-repl 'term 'term)
+  (spacemacs/register-repl 'term 'ansi-term)
   (defun term-send-tab ()
     "Send tab in term mode."
     (interactive)
