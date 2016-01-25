@@ -96,12 +96,14 @@
 (defun git/init-magit ()
   (use-package magit
     :commands (magit-blame-mode
+               magit-cherry-pick-popup
                magit-commit-popup
                magit-diff-popup
                magit-fetch-popup
                magit-log-popup
                magit-pull-popup
                magit-push-popup
+               magit-rebase-popup
                magit-status)
     :init
     (progn
@@ -123,6 +125,7 @@
 
       (spacemacs/declare-prefix "gd" "diff")
       (spacemacs/set-leader-keys
+        "gA" 'magit-cherry-pick-popup
         "gb" 'spacemacs/git-blame-micro-state
         "gc" 'magit-commit-popup
         "gC" 'magit-checkout

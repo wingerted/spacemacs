@@ -137,6 +137,12 @@ that directory."
          (interactive)
          (spacemacs/counsel-search ,tools t (projectile-project-root))))))
 
+  (defun spacemacs/counsel-search-docs ()
+    "Search spacemacs docs using `spacemacs/counsel-search'"
+    (interactive)
+    (spacemacs/counsel-search dotspacemacs-search-tools
+                              nil spacemacs-docs-directory))
+
   (defun spacemacs/counsel-git-grep-region-or-symbol ()
     "Use `counsel-git-grep' to search for the selected region or
  the symbol under the point in the current project with git grep."
@@ -190,6 +196,7 @@ Helm hack."
         "hdf" 'counsel-describe-function
         "hdm" 'spacemacs/describe-mode
         "hdv" 'counsel-describe-variable
+        "hR"  'spacemacs/counsel-search-docs
         ;; insert
         "iu"  'counsel-unicode-char
         ;; jump
@@ -224,6 +231,7 @@ Helm hack."
         "skF" 'spacemacs/search-ack-region-or-symbol
         "skp" 'spacemacs/search-project-ack
         "skP" 'spacemacs/search-project-ack-region-or-symbol)
+      (global-set-key (kbd "M-x") 'counsel-M-x)
 
       ;; Note: Must be set before which-key is loaded.
       (setq prefix-help-command 'counsel-descbinds)
@@ -239,6 +247,7 @@ Helm hack."
     :config
     (progn
       (spacemacs/set-leader-keys
+        "a'" 'spacemacs/ivy-available-repls
         "fr" 'ivy-recentf
         "ir" 'ivy-resume
         "bb" 'ivy-switch-buffer)
@@ -255,6 +264,16 @@ Helm hack."
       (ivy-mode 1)
       (global-set-key (kbd "C-c C-r") 'ivy-resume)
       (global-set-key (kbd "<f6>") 'ivy-resume)
+
+      (defun spacemacs/ivy-available-repls ()
+        "Show available repls."
+        (interactive)
+        (ivy-read "Repls: "
+                  (mapcar #'car spacemacs-repl-list)
+                  :action (lambda (candidate)
+                            (let ((repl (cdr (assoc candidate spacemacs-repl-list))))
+                              (require (car repl))
+                              (call-interactively (cdr repl))))))
 
       (defun spacemacs//hjkl-completion-navigation (&optional arg)
         "Set navigation on `jklh'. ARG non nil means Vim like movements."
