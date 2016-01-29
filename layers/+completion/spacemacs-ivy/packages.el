@@ -12,7 +12,6 @@
 (setq spacemacs-ivy-packages
       '(counsel
         flx
-        hydra
         ;; hack since ivy is part for swiper but I like to
         ;; treat it as a stand-alone package
         (ivy :location built-in)
@@ -22,16 +21,63 @@
 
 (defun spacemacs-ivy/init-counsel ()
   (defvar spacemacs--counsel-commands
-    '(("ag" . "ag --vimgrep %S .")
-      ("pt" . "pt.exe -e --nocolor --nogroup --column %S .")
-      ("ack" . "ack --nocolor --nogroup --column %S .")
-      ("grep" . "grep -nrP %S ."))
+    '(("ag" . "ag --vimgrep %s %S .")
+      ("pt" . "pt -e --nocolor --nogroup --column %s %S .")
+      ("ack" . "ack --nocolor --nogroup --column %s %S .")
+      ("grep" . "grep -nrP %s %S ."))
     "Alist of search commands and their corresponding commands
 with options to run in the shell.")
 
   (defvar spacemacs--counsel-search-max-path-length 30
     "Truncate the current path in counsel search if it is longer
 than this amount.")
+
+  (defvar spacemacs--counsel-initial-cands-shown nil)
+  (defvar spacemacs--counsel-initial-number-cand 100)
+
+  (defun spacemacs//counsel-async-command (cmd)
+    (let* ((counsel--process " *counsel*")
+           (proc (get-process counsel--process))
+           (buff (get-buffer counsel--process)))
+      (when proc
+        (delete-process proc))
+      (when buff
+        (kill-buffer buff))
+      (setq proc (start-process-shell-command
+                  counsel--process
+                  counsel--process
+                  cmd))
+      (setq spacemacs--counsel-initial-cands-shown nil)
+      (setq counsel--async-time (current-time))
+      (set-process-sentinel proc #'counsel--async-sentinel)
+      (set-process-filter proc #'spacemacs//counsel-async-filter)))
+
+  (defun spacemacs//counsel-async-filter (process str)
+    (with-current-buffer (process-buffer process)
+      (insert str))
+    (when (or (null spacemacs--counsel-initial-cands-shown)
+              (time-less-p
+               ;; 0.5s
+               '(0 0 500000 0)
+               (time-since counsel--async-time)))
+      (let (size display-now)
+        (with-current-buffer (process-buffer process)
+          (goto-char (point-min))
+          (setq size (- (buffer-size) (forward-line (buffer-size))))
+          (when (and (null spacemacs--counsel-initial-cands-shown)
+                     (> size spacemacs--counsel-initial-number-cand))
+            (setq ivy--all-candidates
+                  (split-string (buffer-string) "\n" t))
+            (setq display-now t)
+            (setq spacemacs--counsel-initial-cands-shown t)))
+        (let ((ivy--prompt
+               (format (ivy-state-prompt ivy-last)
+                       size)))
+          (if display-now
+              (ivy--insert-minibuffer
+               (ivy--format ivy--all-candidates))
+            (ivy--insert-prompt))))
+      (setq counsel--async-time (current-time))))
 
   ;; see `counsel-ag-function'
   (defun spacemacs//make-counsel-search-function (tool)
@@ -41,11 +87,16 @@ than this amount.")
         "Grep in the current directory for STRING."
         (if (< (length string) 3)
             (counsel-more-chars 3)
-          (let ((default-directory counsel--git-grep-dir)
-                (regex (counsel-unquote-regex-parens
-                        (setq ivy--old-re
-                              (ivy--regex string)))))
-            (counsel--async-command (format base-cmd regex))
+          (let* ((default-directory counsel--git-grep-dir)
+                 (args (if (string-match-p " -- " string)
+                           (let ((split (split-string string " -- ")))
+                             (prog1 (pop split)
+                               (setq string (mapconcat #'identity split " -- "))))
+                         ""))
+                 (regex (counsel-unquote-regex-parens
+                         (setq ivy--old-re
+                               (ivy--regex string)))))
+            (spacemacs//counsel-async-command (format base-cmd args regex))
             nil)))))
 
   ;; see `counsel-ag'
@@ -72,16 +123,17 @@ that directory."
             (or initial-directory
                 (read-directory-name "Start from directory: ")))
       (ivy-read
-       (format "%s from [%s]: "
-               tool
-               (if (< (length counsel--git-grep-dir)
-                      spacemacs--counsel-search-max-path-length)
-                   counsel--git-grep-dir
-                 (concat
-                  "..." (substring counsel--git-grep-dir
-                                   (- (length counsel--git-grep-dir)
-                                      spacemacs--counsel-search-max-path-length)
-                                   (length counsel--git-grep-dir)))))
+       (concat "%-5d "
+               (format "%s from [%s]: "
+                       tool
+                       (if (< (length counsel--git-grep-dir)
+                              spacemacs--counsel-search-max-path-length)
+                           counsel--git-grep-dir
+                         (concat
+                          "..." (substring counsel--git-grep-dir
+                                           (- (length counsel--git-grep-dir)
+                                              spacemacs--counsel-search-max-path-length)
+                                           (length counsel--git-grep-dir))))))
        (spacemacs//make-counsel-search-function tool)
        :initial-input initial-input
        :dynamic-collection t
@@ -239,8 +291,6 @@ Helm hack."
       (spacemacs//ivy-command-not-implemented-yet "jI"))))
 
 (defun spacemacs-ivy/init-flx ())
-
-(defun spacemacs-ivy/init-hydra ())
 
 (defun spacemacs-ivy/init-ivy ()
   (use-package ivy
