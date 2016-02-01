@@ -113,7 +113,7 @@ is achieved by adding the relevant text properties."
         (if (bound-and-true-p linum-mode) (linum-mode -1))
         (unless shell-enable-smart-eshell
           ;; we don't want auto-jump to prompt when smart eshell is enabled.
-          ;; Idea: maybe we could make auto-jump smarter and jump only if the
+          ;; Idea: maybe we could make auto-jump smarter and jump only if
           ;; point is not on a prompt line
           (add-hook 'evil-insert-state-entry-hook
                     'spacemacs//eshell-auto-end nil t))
@@ -274,7 +274,7 @@ is achieved by adding the relevant text properties."
     :init
     (progn
       (setq shell-pop-window-position shell-default-position
-            shell-pop-window-height   shell-default-height
+            shell-pop-window-size     shell-default-height
             shell-pop-term-shell      shell-default-term-shell
             shell-pop-full-span t)
       (defmacro make-shell-pop-command (type &optional shell)
@@ -334,7 +334,7 @@ is achieved by adding the relevant text properties."
     "Send tab in term mode."
     (interactive)
     (term-send-raw-string "\t"))
-  ;; hack to fix pasting issue, the paste micro-state won't
+  ;; hack to fix pasting issue, the paste transient-state won't
   ;; work in term
   (evil-define-key 'normal term-raw-map "p" 'term-paste)
   (evil-define-key 'insert term-raw-map (kbd "C-c C-d") 'term-send-eof)
