@@ -46,3 +46,4 @@ python-*-docs-html
 # Private directory
 private/
 /games/
+srecode-map.el
