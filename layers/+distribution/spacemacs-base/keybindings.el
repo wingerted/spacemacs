@@ -135,7 +135,6 @@
 (spacemacs/set-leader-keys
   "j0" 'spacemacs/push-mark-and-goto-beginning-of-line
   "j$" 'spacemacs/push-mark-and-goto-end-of-line
-  "jb" 'bookmark-jump
   "jd" 'dired-jump
   "jD" 'dired-jump-other-window
   "jf" 'find-function-at-point
@@ -359,13 +358,6 @@
 (with-eval-after-load 'shell
   (evil-define-key 'insert comint-mode-map [up] 'comint-previous-input)
   (evil-define-key 'insert comint-mode-map [down] 'comint-next-input))
-
-;; ivy/helm keys --------------------------------------------------------------
-
-(defvar spacemacs--hjkl-completion-navigation-functions nil
-  "Hook to adjust hjkl keys for completion (helm/ivy) navigation.
-Each function in the hook is run with a single argument, which
-when true should disable the hjkl keys.")
 
 ;; ---------------------------------------------------------------------------
 ;; Transient-states
