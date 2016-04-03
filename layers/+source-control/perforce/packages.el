@@ -1,7 +1,6 @@
 ;;; packages.el --- Perforce Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -60,7 +59,7 @@
                p4-diff-all-opened
                p4-ediff)
     :init
-    (evil-leader/set-key
+    (spacemacs/set-leader-keys
       "p4a" 'p4-add
       "p4b" 'p4-branch
       "p4B" 'p4-branches

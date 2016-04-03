@@ -1,7 +1,6 @@
 ;;; funcs.el --- Rust Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2015 Chris Hoeppner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Chris Hoeppner <me@mkaito.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -26,3 +25,7 @@
 (defun spacemacs/rust-cargo-doc ()
   (interactive)
   (compile "cargo doc"))
+
+(defun spacemacs/rust-cargo-clean ()
+  (interactive)
+  (compile "cargo clean"))

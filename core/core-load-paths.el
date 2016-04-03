@@ -1,7 +1,6 @@
 ;;; core-load-paths.el --- Spacemacs Core File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -36,6 +35,9 @@
 (defconst spacemacs-docs-directory
   (expand-file-name (concat user-emacs-directory "doc/"))
   "Spacemacs documentation directory.")
+(defconst spacemacs-assets-directory
+  (expand-file-name (concat user-emacs-directory "assets/"))
+  "Spacemacs assets directory.")
 (defconst spacemacs-test-directory
   (expand-file-name (concat user-emacs-directory "tests/"))
   "Spacemacs tests directory.")
@@ -44,7 +46,7 @@
   (expand-file-name "~/")
   "User home directory (~/).")
 (defconst pcache-directory
-  (concat spacemacs-cache-directory "pcache"))
+  (concat spacemacs-cache-directory "pcache/"))
 (unless (file-exists-p spacemacs-cache-directory)
     (make-directory spacemacs-cache-directory))
 
@@ -57,5 +59,6 @@
       `(
         ,(concat user-emacs-directory "core/")
         ,(concat user-emacs-directory "core/libs/")
+        ,(concat user-emacs-directory "core/aprilfool/")
         ,(concat user-dropbox-directory "emacs/")
         ))

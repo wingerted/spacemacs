@@ -1,7 +1,6 @@
 ;;; packages.el --- Spacemacs Core Layer packages File
 ;;
-;; Copyright (c) 2012-2014 Sylvain Benner
-;; Copyright (c) 2014-2015 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -13,27 +12,29 @@
 (setq spacemacs-base-packages
       '(
         bind-key
+        (bind-map :step pre)
         bookmark
         diminish
         (electric-indent-mode :location built-in)
         ediff
         eldoc
         evil
+        evil-ediff
         evil-escape
-        evil-leader
+        (evil-evilified-state :location local :step pre :protected t)
         evil-surround
         evil-visualstar
         exec-path-from-shell
         fill-column-indicator
-        helm
-        helm-descbinds
-        helm-projectile
-        (helm-spacemacs :location local)
+        help-fns+
+        hl-todo
         (hs-minor-mode :location built-in)
         (holy-mode :location local :step pre)
         (hybrid-mode :location local :step pre)
+        hydra
         (ido :location built-in)
         ido-vertical-mode
+        (package-menu :location built-in)
         page-break-lines
         popup
         popwin
@@ -41,20 +42,36 @@
         projectile
         quelpa
         recentf
+        ;; request is not a built-in package
+        ;; this is a hack to be able to configure request cache directory.
+        (request :location built-in)
+        restart-emacs
         savehist
         saveplace
         spacemacs-theme
         subword
         undo-tree
         (uniquify :location built-in)
+        (url :location built-in)
         use-package
         which-key
         whitespace
-        winner))
+        winner
+        ws-butler))
 
 ;; Initialization of packages
 
 (defun spacemacs-base/init-bind-key ())
+
+(defun spacemacs-base/init-bind-map ()
+  (use-package bind-map
+    :init
+    (bind-map spacemacs-default-map
+      :prefix-cmd spacemacs-cmds
+      :keys (dotspacemacs-emacs-leader-key)
+      :evil-keys (dotspacemacs-leader-key)
+      :override-minor-modes t
+      :override-mode-name spacemacs-leader-override-mode)))
 
 (defun spacemacs-base/init-bookmark ()
   (use-package bookmark
@@ -70,20 +87,20 @@
     (progn
       ;; Minor modes abbrev --------------------------------------------------------
       (when (display-graphic-p)
-        (eval-after-load "eproject"
-          '(diminish 'eproject-mode " eⓅ"))
-        (eval-after-load "flymake"
-          '(diminish 'flymake-mode " Ⓕ2")))
+        (with-eval-after-load 'eproject
+          (diminish 'eproject-mode " eⓅ"))
+        (with-eval-after-load 'flymake
+          (diminish 'flymake-mode " Ⓕ2")))
       ;; Minor Mode (hidden) ------------------------------------------------------
-      (eval-after-load 'elisp-slime-nav
-        '(diminish 'elisp-slime-nav-mode))
-      (eval-after-load "hi-lock"
-        '(diminish 'hi-lock-mode))
-      (eval-after-load "abbrev"
-        '(diminish 'abbrev-mode))
-      (eval-after-load "subword"
-        '(when (eval-when-compile (version< "24.3.1" emacs-version))
-           (diminish 'subword-mode))))))
+      (with-eval-after-load 'elisp-slime-nav
+        (diminish 'elisp-slime-nav-mode))
+      (with-eval-after-load 'hi-lock
+        (diminish 'hi-lock-mode))
+      (with-eval-after-load 'abbrev
+        (diminish 'abbrev-mode))
+      (with-eval-after-load 'subword
+        (when (eval-when-compile (version< "24.3.1" emacs-version))
+          (diminish 'subword-mode))))))
 
 (defun spacemacs-base/init-eldoc ()
   (use-package eldoc
@@ -109,7 +126,7 @@
 ;;   "setup the evil ediff keymap"
 ;;     (progn
 ;;      (add-to-list 'evil-emacs-state-modes 'Ediff)
-;;      (spacemacs|evilify ediff-mode-map)
+;;      (evilified-state-evilify ediff-mode-map)
 ;;      (spacemacs/activate-evil-leader-for-map 'ediff-mode-map)
 ;;       )
 ;;   )
@@ -127,7 +144,14 @@
        ediff-window-setup-function 'ediff-setup-windows-plain
        ;; emacs is evil and decrees that vertical shall henceforth be horizontal
        ediff-split-window-function 'split-window-horizontally
-       ediff-merge-split-window-function 'split-window-horizontally))))
+       ediff-merge-split-window-function 'split-window-horizontally)
+      ;; restore window layout when done
+      (add-hook 'ediff-quit-hook #'winner-undo))))
+
+(defun spacemacs-base/init-evil-ediff ()
+  (use-package evil-ediff
+    :after (ediff)
+    :if (memq dotspacemacs-editing-style '(hybrid vim))))
 
 (defun spacemacs-base/init-eldoc ()
   (use-package eldoc
@@ -162,9 +186,9 @@
             do
             (eval `(defface ,(intern (format "spacemacs-%s-face" state))
                      `((t (:background ,color
-                                      :foreground ,(face-background 'mode-line)
-                                      :box ,(face-attribute 'mode-line :box)
-                                      :inherit 'mode-line)))
+                                       :foreground ,(face-background 'mode-line)
+                                       :box ,(face-attribute 'mode-line :box)
+                                       :inherit 'mode-line)))
                      (format "%s state face." state)
                      :group 'spacemacs))
             (eval `(setq ,(intern (format "evil-%s-state-cursor" state))
@@ -204,10 +228,11 @@
       (evil-mode 1))
     :config
     (progn
-      ;; evil ex-command key
-      (define-key evil-normal-state-map (kbd dotspacemacs-command-key) 'evil-ex)
-      (define-key evil-visual-state-map (kbd dotspacemacs-command-key) 'evil-ex)
-      (define-key evil-motion-state-map (kbd dotspacemacs-command-key) 'evil-ex)
+      ;; bind function keys
+
+      ;; bind evil-jump-forward for GUI only.
+      (define-key evil-motion-state-map [C-i] 'evil-jump-forward)
+
       ;; Make the current definition and/or comment visible.
       (define-key evil-normal-state-map "zf" 'reposition-window)
       ;; toggle maximize buffer
@@ -218,18 +243,29 @@
       (define-key evil-window-map (kbd "<right>") 'evil-window-right)
       (define-key evil-window-map (kbd "<up>") 'evil-window-up)
       (define-key evil-window-map (kbd "<down>") 'evil-window-down)
-      ;; Make Y equivalent to y$
-      (defun spacemacs/evil-yank-to-end-of-line ()
-        "Yank from point to end of line."
-        (interactive)
-        (evil-yank (point) (point-at-eol)))
-      (when dotspacemacs-remap-Y-to-y$
-        (define-key evil-normal-state-map (kbd "Y")
-          'spacemacs/evil-yank-to-end-of-line)
-        (define-key evil-motion-state-map (kbd "Y")
-          'spacemacs/evil-yank-to-end-of-line))
+      (spacemacs/set-leader-keys "re" 'evil-show-registers)
+      ;; motions keys for help buffers
+      (evil-define-key 'motion help-mode-map (kbd "<escape>") 'quit-window)
+      (evil-define-key 'motion help-mode-map (kbd "<tab>") 'forward-button)
+      (evil-define-key 'motion help-mode-map (kbd "S-<tab>") 'backward-button)
+      (evil-define-key 'motion help-mode-map (kbd "]") 'help-go-forward)
+      (evil-define-key 'motion help-mode-map (kbd "gf") 'help-go-forward)
+      (evil-define-key 'motion help-mode-map (kbd "[") 'help-go-back)
+      (evil-define-key 'motion help-mode-map (kbd "gb") 'help-go-back)
+      (evil-define-key 'motion help-mode-map (kbd "gh") 'help-follow-symbol)
 
-      (evil-leader/set-key "re" 'evil-show-registers)
+      ;; replace `dired-goto-file' with `helm-find-files', since `helm-find-files'
+      ;; can do the same thing and with fuzzy matching and other features.
+      (with-eval-after-load 'dired
+        (evil-define-key 'normal dired-mode-map "J" 'spacemacs/helm-find-files)
+        (define-key dired-mode-map "j" 'spacemacs/helm-find-files)
+        (evil-define-key 'normal dired-mode-map (kbd dotspacemacs-leader-key)
+          spacemacs-default-map))
+
+      ;; It's better that the default value is too small than too big
+      (setq-default evil-shift-width 2)
+      ;; After major mode has changed, reset evil-shift-width
+      (add-hook 'after-change-major-mode-hook 'spacemacs//set-evil-shift-width 'append)
 
       (defmacro evil-map (state key seq)
         "Map for a given STATE a KEY to a sequence SEQ of keys.
@@ -255,9 +291,10 @@ Example: (evil-map visual \"<\" \"<gv\")"
         i.e. `SPC m h h`, to lookup the source of the definition,
         while falling back to `evil-lookup'"
         (interactive)
-        (condition-case nil
-            (execute-kbd-macro (kbd (concat dotspacemacs-leader-key " mhh")))
-          (error (evil-lookup))))
+        (let ((binding (key-binding (kbd (concat dotspacemacs-leader-key " mhh")))))
+          (if (commandp binding)
+              (call-interactively binding)
+            (evil-lookup))))
       (define-key evil-normal-state-map (kbd "K") 'spacemacs/evil-smart-doc-lookup)
 
       (defun spacemacs/evil-smart-goto-definition ()
@@ -266,77 +303,55 @@ Example: (evil-map visual \"<\" \"<gv\")"
         i.e. `SPC m g g`, to lookup the source of the definition,
         while falling back to `evil-goto-definition'"
         (interactive)
-        (condition-case nil
-            (execute-kbd-macro (kbd (concat dotspacemacs-leader-key " mgg")))
-          (error (evil-goto-definition))))
+        (let ((binding (key-binding (kbd (concat dotspacemacs-leader-key " mgg")))))
+          (if (commandp binding)
+              (call-interactively binding)
+            (evil-goto-definition))))
       (define-key evil-normal-state-map
         (kbd "gd") 'spacemacs/evil-smart-goto-definition)
 
-      ;; scrolling micro state
-      (defun spacemacs/scroll-half-page-up ()
-        "Scroll half a page up while keeping cursor in middle of page."
-        (interactive)
-        (evil-window-top)
-        (let ((recenter-redisplay nil))
-          (recenter nil)))
-      (defun spacemacs/scroll-half-page-down ()
-        "Scroll half a page down while keeping cursor in middle of page."
-        (interactive)
-        (evil-window-bottom)
-        ;; required to make repeated presses idempotent
-        (evil-next-visual-line)
-        (let ((recenter-redisplay nil))
-          (recenter nil)))
-      (spacemacs|define-micro-state scroll
-        :doc "[,] page up [.] page down [<] half page up [>] half page down"
-        :execute-binding-on-enter t
-        :evil-leader "n." "n," "n<" "n>"
+      ;; scrolling transient state
+      (spacemacs|define-transient-state scroll
+        :title "Scrolling Transient State"
         :bindings
-        ;; page
-        ("," evil-scroll-page-up)
-        ("." evil-scroll-page-down)
+        ("," evil-scroll-page-up "page up")
+        ("." evil-scroll-page-down "page down")
         ;; half page
-        ("<" spacemacs/scroll-half-page-up)
-        (">" spacemacs/scroll-half-page-down))
+        ("<" evil-scroll-up "half page up")
+        (">" evil-scroll-down "half page down"))
+      (spacemacs/set-leader-keys
+        "n," 'spacemacs/scroll-transient-state/evil-scroll-page-up
+        "n." 'spacemacs/scroll-transient-state/evil-scroll-page-down
+        "n<" 'spacemacs/scroll-transient-state/evil-scroll-up
+        "n>" 'spacemacs/scroll-transient-state/evil-scroll-down)
 
-      ;; support for auto-indentation inhibition on universal argument
-      (spacemacs|advise-commands
-       "handle-indent" (evil-paste-before evil-paste-after) around
-       "Handle the universal prefix argument for auto-indentation."
-       (let ((prefix (ad-get-arg 0)))
-         (ad-set-arg 0 (unless (equal '(4) prefix) prefix))
-         ad-do-it
-         (ad-set-arg 0 prefix)))
+      ;; pasting transient-state
+      (evil-define-command spacemacs//transient-state-0 ()
+        :keep-visual t
+        :repeat nil
+        (interactive)
+        (if current-prefix-arg
+            (progn
+              (setq this-command #'digit-argument)
+              (call-interactively #'digit-argument))
+          (setq this-command #'evil-beginning-of-line
+                hydra-deactivate t)
+          (call-interactively #'evil-beginning-of-line)))
 
-      ;; pasting micro-state
-      (spacemacs|advise-commands
-       "paste-micro-state"
-       (evil-paste-before evil-paste-after evil-visual-paste) after
-       "Initate the paste micro-state."
-       (unless (or (evil-ex-p)
-                   (eq 'evil-paste-from-register this-command))
-         (spacemacs/paste-micro-state)))
-      (defun spacemacs//paste-ms-doc ()
-        "The documentation for the paste micro-state."
-        (format (concat "[%s/%s] Type [p] or [P] to paste the previous or "
-                        "next copied text, [.] to paste the same text")
-                (length kill-ring-yank-pointer) (length kill-ring)))
-      (spacemacs|define-micro-state paste
-        :doc (spacemacs//paste-ms-doc)
-        :use-minibuffer t
+      (spacemacs|define-transient-state paste
+        :title "Pasting Transient State"
+        :doc "\n[%s(length kill-ring-yank-pointer)/%s(length kill-ring)] \
+[_C-j_/_C-k_] cycles through yanked text, [_p_/_P_] pastes the same text above or \
+below. Anything else exits."
         :bindings
-        ("p" evil-paste-pop)
-        ("P" evil-paste-pop-next))
-      (unless dotspacemacs-enable-paste-micro-state
-        (ad-disable-advice 'evil-paste-before 'after
-                           'evil-paste-before-paste-micro-state)
-        (ad-activate 'evil-paste-before)
-        (ad-disable-advice 'evil-paste-after 'after
-                           'evil-paste-after-paste-micro-state)
-        (ad-activate 'evil-paste-after)
-        (ad-disable-advice 'evil-visual-paste 'after
-                           'evil-visual-paste-paste-micro-state)
-        (ad-activate 'evil-visual-paste))
+        ("C-j" evil-paste-pop)
+        ("C-k" evil-paste-pop-next)
+        ("p" evil-paste-after)
+        ("P" evil-paste-before)
+        ("0" spacemacs//transient-state-0))
+      (when dotspacemacs-enable-paste-transient-state
+        (define-key evil-normal-state-map "p" 'spacemacs/paste-transient-state/evil-paste-after)
+        (define-key evil-normal-state-map "P" 'spacemacs/paste-transient-state/evil-paste-before))
 
       ;; define text objects
       (defmacro spacemacs|define-text-object (key name start end)
@@ -351,30 +366,32 @@ Example: (evil-map visual \"<\" \"<gv\")"
                (evil-select-paren ,start-regex ,end-regex beg end type count t))
              (define-key evil-inner-text-objects-map ,key (quote ,inner-name))
              (define-key evil-outer-text-objects-map ,key (quote ,outer-name))
-             (when (configuration-layer/package-usedp 'evil-surround)
+             (with-eval-after-load 'evil-surround
                (push (cons (string-to-char ,key)
                            (if ,end
                                (cons ,start ,end)
                              ,start))
                      evil-surround-pairs-alist)))))
 
-      (defun spacemacs//standard-text-objects ()
-        ;; between dollars sign:
-        (spacemacs|define-text-object "$" "dollar" "$" "$")
-        ;; define stars
-        (spacemacs|define-text-object "*" "star" "*" "*")
-        ;; define block star text object
-        (spacemacs|define-text-object "8" "block-star" "/*" "*/")
-        ;; between pipe characters:
-        (spacemacs|define-text-object "|" "bar" "|" "|")
-        ;; between percent signs:
-        (spacemacs|define-text-object "%" "percent" "%" "%"))
+      (spacemacs|define-text-object "$" "dollar" "$" "$")
+      (spacemacs|define-text-object "*" "star" "*" "*")
+      (spacemacs|define-text-object "8" "block-star" "/*" "*/")
+      (spacemacs|define-text-object "|" "bar" "|" "|")
+      (spacemacs|define-text-object "%" "percent" "%" "%")
+      (spacemacs|define-text-object "/" "slash" "/" "/")
+      (spacemacs|define-text-object "_" "underscore" "_" "_")
+      (spacemacs|define-text-object "-" "hyphen" "-" "-")
+      (spacemacs|define-text-object "~" "tilde" "~" "~")
+      (spacemacs|define-text-object "=" "equal" "=" "=")
 
-      (spacemacs/add-to-hook 'prog-mode-hook '(spacemacs//standard-text-objects))
+      (evil-define-text-object evil-pasted (count &rest args)
+        (list (save-excursion (evil-goto-mark ?\[) (point))
+              (save-excursion (evil-goto-mark ?\]) (point))))
+      (define-key evil-inner-text-objects-map "P" 'evil-pasted)
 
       ;; define text-object for entire buffer
       (evil-define-text-object evil-inner-buffer (count &optional beg end type)
-        (evil-select-paren "\\`" "\\'" beg end type count nil))
+        (list (point-min) (point-max)))
       (define-key evil-inner-text-objects-map "g" 'evil-inner-buffer)
 
       ;; support smart 1parens-strict-mode
@@ -383,40 +400,26 @@ Example: (evil-map visual \"<\" \"<gv\")"
             (around spacemacs/evil-delete-backward-char-and-join activate)
           (if (bound-and-true-p smartparens-strict-mode)
               (call-interactively 'sp-backward-delete-char)
-            ad-do-it))))))
+            ad-do-it)))
+
+      ;; Define history commands for comint
+      (when (eq dotspacemacs-editing-style 'vim)
+        (evil-define-key 'insert comint-mode-map
+          (kbd "C-k") 'comint-previous-input
+          (kbd "C-j") 'comint-next-input))
+      (evil-define-key 'normal comint-mode-map
+        (kbd "C-k") 'comint-previous-input
+        (kbd "C-j") 'comint-next-input))))
 
 (defun spacemacs-base/init-evil-escape ()
   (use-package evil-escape
-    :init
-    (evil-escape-mode)
-    :config
-    (spacemacs|hide-lighter evil-escape-mode)))
+    :init (evil-escape-mode)
+    :config (spacemacs|hide-lighter evil-escape-mode)))
 
-(defun spacemacs-base/init-evil-leader ()
-  (use-package evil-leader
-    :init
-    (progn
-      (setq evil-leader/leader dotspacemacs-leader-key)
-      (global-evil-leader-mode)
-      ;; This is the same hook used by evil-leader. We make sure that this
-      ;; function is called after `evil-leader-mode' using the last argument
-      (add-hook 'evil-local-mode-hook
-                #'spacemacs-additional-leader-mode t))
-    :config
-    (progn
-      ;; Unset shortcuts which shadow evil leader
-      (eval-after-load "compile"
-        '(progn
-           ;; (define-key compilation-mode-map (kbd dotspacemacs-leader-key) nil)
-           (define-key compilation-mode-map (kbd "h") nil)))
-      ;; (eval-after-load "dired" '(define-key dired-mode-map (kbd
-      ;;   dotspacemacs-leader-key) nil))
-      ;; evil-leader does not get activated in existing buffers, so we have to
-      ;; force it here
-      (dolist (buffer (buffer-list))
-        (with-current-buffer buffer
-          (evil-leader-mode 1)
-          (spacemacs-additional-leader-mode 1))))))
+(defun spacemacs-base/init-evil-evilified-state ()
+  (use-package evil-evilified-state)
+  (define-key evil-evilified-state-map (kbd dotspacemacs-leader-key)
+    spacemacs-default-map))
 
 (defun spacemacs-base/init-evil-surround ()
   (use-package evil-surround
@@ -463,438 +466,16 @@ Example: (evil-map visual \"<\" \"<gv\")"
     :config
     (spacemacs|hide-lighter fci-mode)))
 
-(defun spacemacs-base/init-helm ()
-  (use-package helm
-    :defer 1
-    :commands (spacemacs/helm-find-files)
-    :config
-    (progn
-      (when (and dotspacemacs-helm-resize
-                  (or (eq dotspacemacs-helm-position 'bottom)
-                      (eq dotspacemacs-helm-position 'top)))
-        (setq helm-autoresize-min-height 10)
-        (helm-autoresize-mode 1))
+(defun spacemacs-base/init-help-fns+ ()
+  (use-package help-fns+
+    :commands (describe-keymap)
+    :init (spacemacs/set-leader-keys "hdK" 'describe-keymap)))
 
-      ;; from https://www.reddit.com/r/emacs/comments/2z7nbv/lean_helm_window/
-      (defvar helm-source-header-default-background (face-attribute 'helm-source-header :background))
-      (defvar helm-source-header-default-foreground (face-attribute 'helm-source-header :foreground))
-      (defvar helm-source-header-default-box (face-attribute 'helm-source-header :box))
-      (defvar helm-source-header-default-height (face-attribute 'helm-source-header :height) )
-
-      (defun helm-toggle-header-line ()
-        "Hide the `helm' header is there is only one source."
-        (when dotspacemacs-helm-no-header
-          (if (> (length helm-sources) 1)
-              (set-face-attribute 'helm-source-header
-                                  nil
-                                  :foreground helm-source-header-default-foreground
-                                  :background helm-source-header-default-background
-                                  :box helm-source-header-default-box
-                                  :height helm-source-header-default-height)
-            (set-face-attribute 'helm-source-header
-                                nil
-                                :foreground (face-attribute 'helm-selection :background)
-                                :background (face-attribute 'helm-selection :background)
-                                :box nil
-                                :height 0.1))))
-      (add-hook 'helm-before-initialize-hook 'helm-toggle-header-line)
-
-      (defun spacemacs/helm-find-files (arg)
-        "Custom spacemacs implementation for calling helm-find-files-1.
-
-Removes the automatic guessing of the initial value based on thing at point. "
-        (interactive "P")
-        (let* ((hist          (and arg helm-ff-history (helm-find-files-history)))
-                (default-input hist )
-                (input         (cond ((and (eq major-mode 'dired-mode) default-input)
-                                    (file-name-directory default-input))
-                                    ((and (not (string= default-input ""))
-                                            default-input))
-                                    (t (expand-file-name (helm-current-directory))))))
-            (set-text-properties 0 (length input) nil input)
-            (helm-find-files-1 input ))))
-    :init
-    (progn
-      (setq helm-prevent-escaping-from-minibuffer t
-            helm-bookmark-show-location t
-            helm-display-header-line nil
-            helm-split-window-in-side-p t
-            helm-always-two-windows t
-            helm-echo-input-in-header-line t
-            helm-imenu-execute-action-at-once-if-one nil)
-
-      ;; hide minibuffer in Helm session, since we use the header line already
-      (defun helm-hide-minibuffer-maybe ()
-        (when (with-helm-buffer helm-echo-input-in-header-line)
-          (let ((ov (make-overlay (point-min) (point-max) nil nil t)))
-            (overlay-put ov 'window (selected-window))
-            (overlay-put ov 'face (let ((bg-color (face-background 'default nil)))
-                                    `(:background ,bg-color :foreground ,bg-color)))
-            (setq-local cursor-type nil))))
-      (add-hook 'helm-minibuffer-set-up-hook 'helm-hide-minibuffer-maybe)
-
-      ;; fuzzy matching setting
-      (setq helm-M-x-fuzzy-match t
-            helm-apropos-fuzzy-match t
-            helm-file-cache-fuzzy-match t
-            helm-imenu-fuzzy-match t
-            helm-lisp-fuzzy-completion t
-            helm-recentf-fuzzy-match t
-            helm-semantic-fuzzy-match t
-            helm-buffers-fuzzy-matching t)
-
-      ;; helm-locate uses es (from everything on windows, which doesnt like fuzzy)
-      (setq helm-locate-fuzzy-match (executable-find "locate"))
-
-      (defun spacemacs//helm-do-grep-region-or-symbol (&optional targs use-region-or-symbol-p)
-        "Version of `helm-do-grep' with a default input."
-        (interactive)
-        (require 'helm)
-        (cl-letf*
-            (((symbol-function 'this-fn) (symbol-function 'helm-do-grep-1))
-             ((symbol-function 'helm-do-grep-1)
-              (lambda (targets &optional recurse zgrep exts default-input region-or-symbol-p)
-                (let* ((new-input (when region-or-symbol-p
-                                   (if (region-active-p)
-                                       (buffer-substring-no-properties
-                                        (region-beginning) (region-end))
-                                     (thing-at-point 'symbol t))))
-                      (quoted-input (when new-input (rxt-quote-pcre new-input))))
-                  (this-fn targets recurse zgrep exts default-input quoted-input))))
-             (preselection (or (dired-get-filename nil t)
-                               (buffer-file-name (current-buffer))))
-             (targets   (if targs
-                            targs
-                          (helm-read-file-name
-                          "Search in file(s): "
-                          :marked-candidates t
-                          :preselect (and helm-do-grep-preselect-candidate
-                                          (if helm-ff-transformer-show-only-basename
-                                              (helm-basename preselection)
-                                            preselection))))))
-          (helm-do-grep-1 targets nil nil nil nil use-region-or-symbol-p)))
-
-      (defun spacemacs/helm-file-do-grep ()
-        "Search in current file with `grep' using a default input."
-        (interactive)
-        (spacemacs//helm-do-grep-region-or-symbol
-         (list (buffer-file-name (current-buffer))) nil))
-
-      (defun spacemacs/helm-file-do-grep-region-or-symbol ()
-        "Search in current file with `grep' using a default input."
-        (interactive)
-        (spacemacs//helm-do-grep-region-or-symbol
-         (list (buffer-file-name (current-buffer))) t))
-
-      (defun spacemacs/helm-files-do-grep ()
-        "Search in files with `grep'."
-        (interactive)
-        (spacemacs//helm-do-grep-region-or-symbol nil nil))
-
-      (defun spacemacs/helm-files-do-grep-region-or-symbol ()
-        "Search in files with `grep' using a default input."
-        (interactive)
-        (spacemacs//helm-do-grep-region-or-symbol nil t))
-
-      (defun spacemacs/helm-buffers-do-grep ()
-        "Search in opened buffers with `grep'."
-        (interactive)
-        (let ((buffers (cl-loop for buffer in (buffer-list)
-                                when (buffer-file-name buffer)
-                                collect (buffer-file-name buffer))))
-          (spacemacs//helm-do-grep-region-or-symbol buffers nil)))
-
-      (defun spacemacs/helm-buffers-do-grep-region-or-symbol ()
-        "Search in opened buffers with `grep' with a default input."
-        (interactive)
-        (let ((buffers (cl-loop for buffer in (buffer-list)
-                                when (buffer-file-name buffer)
-                                collect (buffer-file-name buffer))))
-          (spacemacs//helm-do-grep-region-or-symbol buffers t)))
-
-      (defun spacemacs/last-search-buffer ()
-        "open last helm-ag or hgrep buffer."
-        (interactive)
-        (if (get-buffer "*helm ag results*")
-            (switch-to-buffer-other-window "*helm ag results*")
-            (if (get-buffer "*hgrep*")
-                (switch-to-buffer-other-window "*hgrep*")
-                (message "No previous search buffer found"))))
-
-      ;; use helm by default for M-x
-      (unless (configuration-layer/package-usedp 'smex)
-        (global-set-key (kbd "M-x") 'helm-M-x))
-
-      (evil-leader/set-key
-        "<f1>" 'helm-apropos
-        "bb"   'helm-mini
-        "Cl"   'helm-colors
-        "ff"   'spacemacs/helm-find-files
-        "fF"   'helm-find-files
-        "fL"   'helm-locate
-        "fr"   'helm-recentf
-        "hb"   'helm-filtered-bookmarks
-        "hi"   'helm-info-at-point
-        "hl"   'helm-resume
-        "hm"   'helm-man-woman
-        "iu"   'helm-ucs
-        "ry"   'helm-show-kill-ring
-        "rr"   'helm-register
-        "rm"   'helm-all-mark-rings
-        "sL"   'spacemacs/last-search-buffer
-        "sl"   'spacemacs/jump-in-buffer)
-
-      ;; search with grep
-      (evil-leader/set-key
-        "sgb"  'spacemacs/helm-buffers-do-grep
-        "sgB"  'spacemacs/helm-buffers-do-grep-region-or-symbol
-        "sgf"  'spacemacs/helm-files-do-grep
-        "sgF"  'spacemacs/helm-files-do-grep-region-or-symbol
-        "sgg"  'spacemacs/helm-file-do-grep
-        "sgG"  'spacemacs/helm-file-do-grep-region-or-symbol)
-
-      ;; define the key binding at the very end in order to allow the user
-      ;; to overwrite any key binding
-      (add-hook 'emacs-startup-hook
-                (lambda ()
-                  (unless (configuration-layer/package-usedp 'smex)
-                    (evil-leader/set-key dotspacemacs-command-key 'helm-M-x))))
-
-      (defvar spacemacs-helm-display-help-buffer-regexp '("*.*Helm.*Help.**"))
-      (defvar spacemacs-helm-display-buffer-regexp `("*.*helm.**"
-                                                     (display-buffer-in-side-window)
-                                                     (inhibit-same-window . t)
-                                                     (side . ,dotspacemacs-helm-position)
-                                                     (window-width . 0.6)
-                                                     (window-height . 0.4)))
-      (defvar spacemacs-display-buffer-alist nil)
-      (defun spacemacs//helm-prepare-display ()
-        "Prepare necessary settings to make Helm display properly."
-        ;; avoid Helm buffer being diplaye twice when user
-        ;; sets this variable to some function that pop buffer to
-        ;; a window. See https://github.com/syl20bnr/spacemacs/issues/1396
-        (let ((display-buffer-base-action '(nil)))
-          (setq spacemacs-display-buffer-alist display-buffer-alist)
-          ;; the only buffer to display is Helm, nothing else we must set this
-          ;; otherwise Helm cannot reuse its own windows for copyinng/deleting
-          ;; etc... because of existing popwin buffers in the alist
-          (setq display-buffer-alist nil)
-          (popwin-mode -1)))
-
-      (defun spacemacs//display-helm-window (buffer)
-        (let ((display-buffer-alist (list spacemacs-helm-display-help-buffer-regexp
-                                          ;; this or any specialized case of Helm buffer must be added AFTER
-                                          ;; `spacemacs-helm-display-buffer-regexp'. Otherwise,
-                                          ;; `spacemacs-helm-display-buffer-regexp' will be used before
-                                          ;; `spacemacs-helm-display-help-buffer-regexp' and display
-                                          ;; configuration for normal Helm buffer is applied for helm help
-                                          ;; buffer, making the help buffer unable to be displayed.
-                                          spacemacs-helm-display-buffer-regexp)))
-          (helm-default-display-buffer buffer)))
-
-      (setq helm-display-function 'spacemacs//display-helm-window)
-
-      (defun spacemacs//restore-previous-display-config ()
-        (popwin-mode 1)
-        ;; we must enable popwin-mode first then restore `display-buffer-alist'
-        ;; Otherwise, popwin keeps adding up its own buffers to `display-buffer-alist'
-        ;; and could slow down Emacs as the list grows
-        (setq display-buffer-alist spacemacs-display-buffer-alist))
-
-      (add-hook 'helm-after-initialize-hook 'spacemacs//helm-prepare-display)
-      ;;  Restore popwin-mode after a Helm session finishes.
-      (add-hook 'helm-cleanup-hook 'spacemacs//restore-previous-display-config)
-
-      ;; Add minibuffer history with `helm-minibuffer-history'
-      (define-key minibuffer-local-map (kbd "C-c C-l") 'helm-minibuffer-history)
-
-      (defun spacemacs//helm-cleanup ()
-        "Cleanup some helm related states when quitting."
-        ;; deactivate any running transient map (micro-state)
-        (setq overriding-terminal-local-map nil))
-      (add-hook 'helm-cleanup-hook 'spacemacs//helm-cleanup)
-
-      (defface spacemacs-helm-navigation-ms-face
-        `((t :background ,(face-attribute 'error :foreground) :foreground "black"))
-        "Face for helm heder when helm micro-state is activated."
-        :group 'spacemacs))
-
-    :config
-    (progn
-      (helm-mode +1)
-      (defun spacemacs//set-dotted-directory ()
-        "Set the face of diretories for `.' and `..'"
-        (set-face-attribute 'helm-ff-dotted-directory
-                            nil
-                            :foreground nil
-                            :background nil
-                            :inherit 'helm-ff-directory))
-      (add-hook 'helm-find-files-before-init-hook 'spacemacs//set-dotted-directory)
-
-      ;; alter helm-bookmark key bindings to be simpler
-      (defun simpler-helm-bookmark-keybindings ()
-        (define-key helm-bookmark-map (kbd "C-d") 'helm-bookmark-run-delete)
-        (define-key helm-bookmark-map (kbd "C-e") 'helm-bookmark-run-edit)
-        (define-key helm-bookmark-map (kbd "C-f") 'helm-bookmark-toggle-filename)
-        (define-key helm-bookmark-map (kbd "C-o") 'helm-bookmark-run-jump-other-window)
-        (define-key helm-bookmark-map (kbd "C-/") 'helm-bookmark-help))
-      (add-hook 'helm-mode-hook 'simpler-helm-bookmark-keybindings)
-
-      ;; helm navigation on hjkl
-      (defun spacemacs//helm-hjkl-navigation (&optional arg)
-        "Set navigation in helm on `jklh'.
-ARG non nil means that the editing style is `vim'."
-        (cond
-         (arg
-          ;; better navigation on homerow
-          ;; rebind `describe-key' for convenience
-          (define-key helm-map (kbd "C-j") 'helm-next-line)
-          (define-key helm-map (kbd "C-k") 'helm-previous-line)
-          (define-key helm-map (kbd "C-h") 'helm-next-source)
-          (define-key helm-map (kbd "C-S-h") 'describe-key)
-          (define-key helm-map (kbd "C-l") (kbd "RET"))
-          (dolist (keymap (list helm-find-files-map helm-read-file-map))
-            (define-key keymap (kbd "C-l") 'helm-execute-persistent-action)
-            (define-key keymap (kbd "C-h") 'helm-find-files-up-one-level)
-            (define-key keymap (kbd "C-S-h") 'describe-key)))
-         (t
-          (define-key helm-map (kbd "C-j") 'helm-execute-persistent-action)
-          (define-key helm-map (kbd "C-k") 'helm-delete-minibuffer-contents)
-          (define-key helm-map (kbd "C-h") nil)
-          (define-key helm-map (kbd "C-l") 'helm-recenter-top-bottom-other-window))))
-      (spacemacs//helm-hjkl-navigation (member dotspacemacs-editing-style '(vim hybrid)))
-
-      (defun spacemacs/helm-edit ()
-        "Switch in edit mode depending on the current helm buffer."
-        (interactive)
-        (cond
-         ((string-equal "*helm-ag*" helm-buffer)
-          (helm-ag-edit))))
-
-      (defun spacemacs//helm-navigation-ms-on-enter ()
-        "Initialization of helm micro-state."
-        ;; faces
-        (spacemacs//helm-navigation-ms-set-face)
-        (setq spacemacs--helm-navigation-ms-face-cookie-minibuffer
-              (face-remap-add-relative
-               'minibuffer-prompt
-               'spacemacs-helm-navigation-ms-face))
-        ;; bind actions on numbers starting from 1 which executes action 0
-        (dotimes (n 10)
-          (define-key helm-map (number-to-string n)
-            `(lambda () (interactive) (helm-select-nth-action
-                                       ,(% (+ n 9) 10))))))
-
-      (defun spacemacs//helm-navigation-ms-set-face ()
-        "Set the face for helm header in helm navigation micro-state"
-        (with-helm-window
-          (setq spacemacs--helm-navigation-ms-face-cookie-header
-                (face-remap-add-relative
-                 'helm-header
-                 'spacemacs-helm-navigation-ms-face))))
-
-      (defun spacemacs//helm-navigation-ms-on-exit ()
-        "Action to perform when exiting helm micro-state."
-        ;; restore helm key map
-        (dotimes (n 10) (define-key helm-map (number-to-string n) nil))
-        ;; restore faces
-        (with-helm-window
-          (face-remap-remove-relative
-           spacemacs--helm-navigation-ms-face-cookie-header))
-        (face-remap-remove-relative
-         spacemacs--helm-navigation-ms-face-cookie-minibuffer))
-
-      (defun spacemacs//helm-navigation-ms-full-doc ()
-        "Full documentation for helm navigation micro-state."
-        "
-  [?]          display this help
-  [a]          toggle action selection page
-  [e]          edit occurrences if supported
-  [j] [k]      next/previous candidate
-  [h] [l]      previous/next source
-  [t]          toggle visible mark
-  [T]          toggle all mark
-  [v]          persistent action
-  [q]          quit")
-
-      (spacemacs|define-micro-state helm-navigation
-        :persistent t
-        :disable-evil-leader t
-        :define-key (helm-map . "M-SPC") (helm-map . "s-M-SPC")
-        :on-enter (spacemacs//helm-navigation-ms-on-enter)
-        :on-exit  (spacemacs//helm-navigation-ms-on-exit)
-        :bindings
-        ("<tab>" helm-select-action :exit t)
-        ("C-i" helm-select-action :exit t)
-        ("<RET>" helm-maybe-exit-minibuffer :exit t)
-        ("?" nil :doc (spacemacs//helm-navigation-ms-full-doc))
-        ("a" helm-select-action :post (spacemacs//helm-navigation-ms-set-face))
-        ("e" spacemacs/helm-edit)
-        ("h" helm-previous-source)
-        ("j" helm-next-line)
-        ("k" helm-previous-line)
-        ("l" helm-next-source)
-        ("q" nil :exit t)
-        ("t" helm-toggle-visible-mark)
-        ("T" helm-toggle-all-marks)
-        ("v" helm-execute-persistent-action))
-
-      ;; Swap default TAB and C-z commands.
-      ;; For GUI.
-      (define-key helm-map (kbd "<tab>") 'helm-execute-persistent-action)
-      ;; For terminal.
-      (define-key helm-map (kbd "TAB") 'helm-execute-persistent-action)
-      (define-key helm-map (kbd "C-z") 'helm-select-action)
-
-      (eval-after-load "helm-mode" ; required
-        '(spacemacs|hide-lighter helm-mode)))))
-
-(defun spacemacs-base/init-helm-descbinds ()
-  (use-package helm-descbinds
+(defun spacemacs-base/init-hl-todo ()
+  (use-package hl-todo
     :defer t
-    :init
-    (progn
-      (setq helm-descbinds-window-style 'split)
-      (add-hook 'helm-mode-hook 'helm-descbinds-mode)
-      (evil-leader/set-key "?" 'helm-descbinds))))
-
-(defun spacemacs-base/init-helm-projectile ()
-  (use-package helm-projectile
-    :commands (helm-projectile-switch-to-buffer
-               helm-projectile-find-dir
-               helm-projectile-dired-find-dir
-               helm-projectile-recentf
-               helm-projectile-find-file
-               helm-projectile-grep
-               helm-projectile
-               helm-projectile-switch-project)
-    :init
-    (progn
-      (setq projectile-switch-project-action 'helm-projectile)
-
-      (defconst spacemacs-use-helm-projectile t
-        "This variable is only defined if helm-projectile is used.")
-
-      ;; needed for smart search if user's default tool is grep
-      (defalias 'spacemacs/helm-project-do-grep 'helm-projectile-grep)
-      (defalias
-        'spacemacs/helm-project-do-grep-region-or-symbol 'helm-projectile-grep)
-
-      (evil-leader/set-key
-        "pb"  'helm-projectile-switch-to-buffer
-        "pd"  'helm-projectile-find-dir
-        "pf"  'helm-projectile-find-file
-        "ph"  'helm-projectile
-        "pp"  'helm-projectile-switch-project
-        "pr"  'helm-projectile-recentf
-        "pv"  'projectile-vc
-        "sgp" 'helm-projectile-grep))))
-
-(defun spacemacs-base/init-helm-spacemacs ()
-  (use-package helm-spacemacs
-    :commands helm-spacemacs
-    :init
-    (evil-leader/set-key "feh" 'helm-spacemacs)))
+    :init (spacemacs/add-to-hooks 'hl-todo-mode '(text-mode-hook
+                                                  prog-mode-hook))))
 
 (defun spacemacs-base/init-hs-minor-mode ()
   ;; required for evil folding
@@ -937,6 +518,18 @@ ARG non nil means that the editing style is `vim'."
         :evil-leader "tEh")
       (spacemacs|diminish hybrid-mode " Ⓔh" " Eh"))))
 
+(defun spacemacs-base/init-hydra ()
+  (use-package hydra
+    :init
+    ;; turn off evil in corelv buffers
+    (push '("\\*LV\\*") evil-buffer-regexps)
+
+    (defun spacemacs//hydra-key-doc-function (key key-width doc doc-width)
+      (format (format "[%%%ds] %%%ds" key-width (- -1 doc-width))
+              key doc))
+    (setq hydra-key-doc-function 'spacemacs//hydra-key-doc-function)
+    (setq hydra-head-format "[%s] ")))
+
 (defun spacemacs-base/init-ido ()
   (ido-mode t)
   (setq ido-save-directory-list-file (concat spacemacs-cache-directory
@@ -944,18 +537,20 @@ ARG non nil means that the editing style is `vim'."
         ;; enable fuzzy matching
         ido-enable-flex-matching t))
 
+(defun spacemacs-base/init-package-menu ()
+  (evilified-state-evilify-map package-menu-mode-map
+    :mode package-menu-mode))
+
 (defun spacemacs-base/init-ido-vertical-mode ()
   (use-package ido-vertical-mode
     :init
     (progn
       (ido-vertical-mode t)
-      (when dotspacemacs-use-ido
-        (evil-leader/set-key "ff" 'ido-find-file))
       (defun spacemacs//ido-minibuffer-setup ()
         "Setup the minibuffer."
         ;; Since ido is implemented in a while loop where each
         ;; iteration setup a whole new minibuffer, we have to keep
-        ;; track of any activated ido navigation micro-state and force
+        ;; track of any activated ido navigation transient-state and force
         ;; the reactivation at each iteration.
         (when spacemacs--ido-navigation-ms-enabled
           (spacemacs/ido-navigation-micro-state)))
@@ -965,7 +560,7 @@ ARG non nil means that the editing style is `vim'."
         (when spacemacs--ido-navigation-ms-face-cookie-minibuffer
           (face-remap-remove-relative
            spacemacs--ido-navigation-ms-face-cookie-minibuffer))
-        ;; be sure to wipe any previous micro-state flag
+        ;; be sure to wipe any previous transient-state flag
         (setq spacemacs--ido-navigation-ms-enabled nil)
         ;; overwrite the key bindings for ido vertical mode only
         (define-key ido-completion-map (kbd "C-<return>") 'ido-select-text)
@@ -995,7 +590,7 @@ ARG non nil means that the editing style is `vim'."
         (define-key ido-completion-map (kbd "<down>") 'ido-next-match)
         (define-key ido-completion-map (kbd "<left>") 'ido-delete-backward-updir)
         (define-key ido-completion-map (kbd "<right>") 'ido-exit-minibuffer)
-        ;; initiate micro-state
+        ;; initiate transient-state
         (define-key ido-completion-map (kbd "M-SPC") 'spacemacs/ido-navigation-micro-state)
         (define-key ido-completion-map (kbd "s-M-SPC") 'spacemacs/ido-navigation-micro-state)
         )
@@ -1048,7 +643,7 @@ ARG non nil means that the editing style is `vim'."
           result))
 
       (defvar spacemacs--ido-navigation-ms-enabled nil
-        "Flag which is non nil when ido navigation micro-state is enabled.")
+        "Flag which is non nil when ido navigation transient-state is enabled.")
 
       (defvar spacemacs--ido-navigation-ms-face-cookie-minibuffer nil
         "Cookie pointing to the local face remapping.")
@@ -1057,28 +652,28 @@ ARG non nil means that the editing style is `vim'."
         `((t :background ,(face-attribute 'error :foreground)
              :foreground "black"
              :weight bold))
-        "Face for ido minibuffer prompt when ido micro-state is activated."
+        "Face for ido minibuffer prompt when ido transient-state is activated."
         :group 'spacemacs)
 
       (defun spacemacs//ido-navigation-ms-set-face ()
-        "Set faces for ido navigation micro-state."
+        "Set faces for ido navigation transient-state."
         (setq spacemacs--ido-navigation-ms-face-cookie-minibuffer
               (face-remap-add-relative
                'minibuffer-prompt
                'spacemacs-ido-navigation-ms-face)))
 
       (defun spacemacs//ido-navigation-ms-on-enter ()
-        "Initialization of ido micro-state."
+        "Initialization of ido transient-state."
         (setq spacemacs--ido-navigation-ms-enabled t)
         (spacemacs//ido-navigation-ms-set-face))
 
       (defun spacemacs//ido-navigation-ms-on-exit ()
-        "Action to perform when exiting ido micro-state."
+        "Action to perform when exiting ido transient-state."
         (face-remap-remove-relative
          spacemacs--ido-navigation-ms-face-cookie-minibuffer))
 
       (defun spacemacs//ido-navigation-ms-full-doc ()
-        "Full documentation for ido navigation micro-state."
+        "Full documentation for ido navigation transient-state."
         "
   [?]          display this help
   [e]          enter dired
@@ -1093,13 +688,13 @@ ARG non nil means that the editing style is `vim'."
   [v]          open in a new vertical split
   [q]          quit")
 
-      (spacemacs|define-micro-state ido-navigation
-        :persistent t
-        :disable-evil-leader t
+      (spacemacs|define-transient-state ido-navigation
+        :title "ido Transient State"
+        :foreign-keys run
         :on-enter (spacemacs//ido-navigation-ms-on-enter)
         :on-exit  (spacemacs//ido-navigation-ms-on-exit)
         :bindings
-        ("?" nil :doc (spacemacs//ido-navigation-ms-full-doc))
+        ;;("?" nil (spacemacs//ido-navigation-ms-full-doc))
         ("<RET>" ido-exit-minibuffer :exit t)
         ("<escape>" nil :exit t)
         ("e" ido-select-text :exit t)
@@ -1132,8 +727,8 @@ ARG non nil means that the editing style is `vim'."
     :config
     (progn
       (popwin-mode 1)
-      (evil-leader/set-key "wpm" 'popwin:messages)
-      (evil-leader/set-key "wpp" 'popwin:close-popup-window)
+      (spacemacs/set-leader-keys "wpm" 'popwin:messages)
+      (spacemacs/set-leader-keys "wpp" 'popwin:close-popup-window)
 
       ;; don't use default value but manage it ourselves
       (setq popwin:special-display-config nil)
@@ -1157,7 +752,7 @@ ARG non nil means that the editing style is `vim'."
                        popwin:special-display-config))))))
 
 (defun spacemacs-base/init-process-menu ()
-  (evilify process-menu-mode process-menu-mode-map))
+  (evilified-state-evilify process-menu-mode process-menu-mode-map))
 
 (defun spacemacs-base/init-projectile ()
   (use-package projectile
@@ -1165,14 +760,15 @@ ARG non nil means that the editing style is `vim'."
                projectile-ag
                projectile-compile-project
                projectile-dired
-               projectile-grep
                projectile-find-dir
                projectile-find-file
                projectile-find-tag
                projectile-find-test-file
+               projectile-grep
                projectile-invalidate-cache
                projectile-kill-buffers
                projectile-multi-occur
+               projectile-project-p
                projectile-project-root
                projectile-recentf
                projectile-regenerate-tags
@@ -1184,27 +780,26 @@ ARG non nil means that the editing style is `vim'."
                projectile-vc)
     :init
     (progn
-      ;; note for Windows: GNU find or Cygwin find must be in path
-      ;; default parameters are not supported on Windows, we default
-      ;; to simplest call to find.
-      (when (spacemacs/system-is-mswindows)
-        (setq projectile-generic-command "find . -type f"))
-      (setq projectile-enable-caching t
-            projectile-indexing-method 'alien
-            projectile-sort-order 'recentf
+      ;; note for Windows: GNU find or Cygwin find must be in path to enable
+      ;; fast indexing
+      (when (and (spacemacs/system-is-mswindows) (executable-find "find"))
+        (setq  projectile-indexing-method 'alien
+               projectile-generic-command "find . -type f"))
+      (setq projectile-sort-order 'recentf
             projectile-cache-file (concat spacemacs-cache-directory
                                           "projectile.cache")
             projectile-known-projects-file (concat spacemacs-cache-directory
                                                    "projectile-bookmarks.eld"))
       (unless (configuration-layer/package-usedp 'helm-projectile)
-        (evil-leader/set-key
+        (spacemacs/set-leader-keys
           "pb" 'projectile-switch-to-buffer
           "pd" 'projectile-find-dir
           "pf" 'projectile-find-file
+          "pF" 'projectile-find-file-dwim
           "ph" 'helm-projectile
           "pr" 'projectile-recentf
           "ps" 'projectile-switch-project))
-      (evil-leader/set-key
+      (spacemacs/set-leader-keys
         "p!" 'projectile-run-shell-command-in-root
         "p&" 'projectile-run-async-shell-command-in-root
         "pa" 'projectile-toggle-between-implementation-and-test
@@ -1228,18 +823,71 @@ ARG non nil means that the editing style is `vim'."
   (use-package recentf
     :defer t
     :init
-    ;; lazy load recentf
-    (add-hook 'find-file-hook (lambda () (unless recentf-mode
-                                           (recentf-mode)
-                                           (recentf-track-opened-file))))
+    (progn
+      ;; lazy load recentf
+      (add-hook 'find-file-hook (lambda () (unless recentf-mode
+                                             (recentf-mode)
+                                             (recentf-track-opened-file))))
+      (setq recentf-save-file (concat spacemacs-cache-directory "recentf")
+            recentf-max-saved-items 1000
+            recentf-auto-cleanup 'never
+            recentf-auto-save-timer (run-with-idle-timer 600 t
+                                                         'recentf-save-list)))
     :config
-    (add-to-list 'recentf-exclude (expand-file-name spacemacs-cache-directory))
-    (add-to-list 'recentf-exclude (expand-file-name package-user-dir))
-    (add-to-list 'recentf-exclude "COMMIT_EDITMSG\\'")
-    (setq recentf-save-file (concat spacemacs-cache-directory "recentf"))
-    (setq recentf-max-saved-items 100)
-    (setq recentf-auto-cleanup 'never)
-    (setq recentf-auto-save-timer (run-with-idle-timer 600 t 'recentf-save-list))))
+    (progn
+      (add-to-list 'recentf-exclude
+                   (expand-file-name spacemacs-cache-directory))
+      (add-to-list 'recentf-exclude (expand-file-name package-user-dir))
+      (add-to-list 'recentf-exclude "COMMIT_EDITMSG\\'"))))
+
+(defun spacemacs-base/init-request ()
+  (setq request-storage-directory (concat spacemacs-cache-directory
+                                          "request/")))
+
+(defun spacemacs-base/init-restart-emacs()
+  (use-package restart-emacs
+    :defer t
+    :init
+    (defun spacemacs/restart-emacs (&optional args)
+      "Restart emacs."
+      (interactive)
+      (setq spacemacs-really-kill-emacs t)
+      (restart-emacs args))
+    (defun spacemacs/restart-emacs-resume-layouts (&optional args)
+      "Restart emacs and resume layouts."
+      (interactive)
+      (spacemacs/restart-emacs (cons "--resume-layouts" args)))
+    (defun spacemacs/restart-emacs-debug-init (&optional args)
+      "Restart emacs and enable debug-init."
+      (interactive)
+      (spacemacs/restart-emacs (cons "--debug-init" args)))
+    (defun spacemacs/restart-stock-emacs-with-packages (packages &optional args)
+      "Restart emacs without the spacemacs configuration, enable
+debug-init and load the given list of packages."
+      (interactive
+       (progn
+         (unless package--initialized
+           (package-initialize t))
+         (let ((packages (append (mapcar 'car package-alist)
+                                 (mapcar 'car package-archive-contents)
+                                 (mapcar 'car package--builtins))))
+           (setq packages (mapcar 'symbol-name packages))
+           (let ((val (completing-read-multiple "Packages to load (comma separated): "
+                                                packages nil t)))
+             `(,val)))))
+      (let ((load-packages-string (mapconcat (lambda (pkg) (format "(use-package %s)" pkg))
+                                             packages " ")))
+        (spacemacs/restart-emacs-debug-init
+         (append (list "-q" "--execute"
+                       (concat "(progn (package-initialize) "
+                               "(require 'use-package)"
+                               load-packages-string ")"))
+                 args))))
+    (spacemacs/set-leader-keys
+      "qd" 'spacemacs/restart-emacs-debug-init
+      "qD" 'spacemacs/restart-stock-emacs-with-packages
+      "qr" 'spacemacs/restart-emacs-resume-layouts
+      "qR" 'spacemacs/restart-emacs)))
 
 (defun spacemacs-base/init-savehist ()
   (use-package savehist
@@ -1261,9 +909,12 @@ ARG non nil means that the editing style is `vim'."
   (use-package saveplace
     :init
     (progn
+      (if (fboundp 'save-place-mode)
+          ;; Emacs 25 has a proper mode for `save-place'
+          (save-place-mode)
+        (setq save-place t))
       ;; Save point position between sessions
-      (setq save-place t
-            save-place-file (concat spacemacs-cache-directory "places")))))
+      (setq save-place-file (concat spacemacs-cache-directory "places")))))
 
 (defun spacemacs-base/init-spacemacs-theme ()
   (use-package spacemacs-theme
@@ -1324,6 +975,10 @@ ARG non nil means that the editing style is `vim'."
         ;; don't screw special buffers
         uniquify-ignore-buffers-re "^\\*"))
 
+(defun spacemacs-base/init-url ()
+  ;; gravatars from magit use this to store their cache
+  (setq url-configuration-directory (concat spacemacs-cache-directory "url/")))
+
 (defun spacemacs-base/init-use-package ())
 
 (defun spacemacs-base/init-which-key ()
@@ -1337,6 +992,9 @@ ARG non nil means that the editing style is `vim'."
         :documentation
         "Display a buffer with available key bindings."
         :evil-leader "tK")
+
+      (spacemacs/set-leader-keys "hk" 'which-key-show-top-level)
+
       (let ((new-descriptions
              ;; being higher in this list means the replacement is applied later
              '(
@@ -1348,7 +1006,10 @@ ARG non nil means that the editing style is `vim'."
                ("avy-goto-word-or-subword-1" . "avy word")
                ("shell-command" . "shell cmd")
                ("spacemacs/default-pop-shell" . "open shell")
-               ("spacemacs/helm-project-smart-do-search-region-or-symbol" . "smart search")
+               ("spacemacs/helm-project-smart-do-search-region-or-symbol" . "smart search w/input")
+               ("spacemacs/helm-project-smart-do-search" . "smart search")
+               ("spacemacs/search-project-auto-region-or-symbol" . "search project w/input")
+               ("spacemacs/search-project-auto" . "search project")
                ("helm-descbinds" . "show keybindings")
                ("sp-split-sexp" . "split sexp")
                ("avy-goto-line" . "avy line")
@@ -1357,34 +1018,24 @@ ARG non nil means that the editing style is `vim'."
                ("helm-apropos" . "apropos")
                ("spacemacs/toggle-hybrid-mode" . "hybrid (hybrid-mode)")
                ("spacemacs/toggle-holy-mode" . "emacs (holy-mode)")
-               ("evil-lisp-state-\\(.+\\)" . "\\1"))))
+               ("evil-lisp-state-\\(.+\\)" . "\\1")
+               ("\\(.+\\)-transient-state/\\(.+\\)" . "\\2")
+               ("\\(.+\\)-transient-state/body" . "\\1-transient-state"))))
         (dolist (nd new-descriptions)
           ;; ensure the target matches the whole string
           (push (cons (concat "\\`" (car nd) "\\'") (cdr nd))
                 which-key-description-replacement-alist)))
       (dolist (leader-key `(,dotspacemacs-leader-key ,dotspacemacs-emacs-leader-key))
         (which-key-add-key-based-replacements
-         (concat leader-key " m")    "major mode commands"
-         (concat leader-key " " dotspacemacs-command-key) "M-x"))
-      (if (fboundp 'which-key-declare-prefixes)
-          (which-key-declare-prefixes
-            dotspacemacs-leader-key '("root" . "Spacemacs root")
-            dotspacemacs-emacs-leader-key '("root" . "Spacemacs root")
-            (concat dotspacemacs-leader-key " m")
-            '("major-mode-cmd" . "Major mode commands")
-            (concat dotspacemacs-emacs-leader-key " m")
-            '("major-mode-cmd" . "Major mode commands"))
-        ;; no need to use this after everyone updates which-key
-        (setq which-key-prefix-title-alist
-              `((,(listify-key-sequence
-                   (kbd (concat dotspacemacs-leader-key " m"))) . "Major mode commands")
-                (,(listify-key-sequence
-                   (kbd (concat dotspacemacs-emacs-leader-key " m"))) . "Major mode commands")
-                (,(listify-key-sequence
-                   (kbd dotspacemacs-leader-key)) . "Spacemacs root")
-                (,(listify-key-sequence
-                   (kbd dotspacemacs-emacs-leader-key)) . "Spacemacs root")))
-        (nconc which-key-prefix-title-alist spacemacs/prefix-titles))
+          (concat leader-key " m")    "major mode commands"
+          (concat leader-key " " dotspacemacs-emacs-command-key) "M-x"))
+      (which-key-declare-prefixes
+        dotspacemacs-leader-key '("root" . "Spacemacs root")
+        dotspacemacs-emacs-leader-key '("root" . "Spacemacs root")
+        (concat dotspacemacs-leader-key " m")
+        '("major-mode-cmd" . "Major mode commands")
+        (concat dotspacemacs-emacs-leader-key " m")
+        '("major-mode-cmd" . "Major mode commands"))
       ;; disable special key handling for spacemacs, since it can be
       ;; disorienting if you don't understand it
       (pcase dotspacemacs-which-key-position
@@ -1396,7 +1047,9 @@ ARG non nil means that the editing style is `vim'."
             which-key-prevent-C-h-from-cycling t
             which-key-echo-keystrokes 0.02
             which-key-max-description-length 32
-            which-key-idle-delay dotspacemacs-which-key-delay)
+            which-key-sort-order 'which-key-key-order-alpha
+            which-key-idle-delay dotspacemacs-which-key-delay
+            which-key-allow-evil-operators t)
       (which-key-mode)
       (spacemacs|diminish which-key-mode " Ⓚ" " K"))))
 
@@ -1454,6 +1107,14 @@ ARG non nil means that the editing style is `vim'."
                           :background nil)
       (spacemacs|diminish whitespace-mode " ⓦ" " w")
       (spacemacs|diminish global-whitespace-mode " Ⓦ" " W"))))
+
+(defun spacemacs-base/init-ws-butler ()
+  (use-package ws-butler
+    :if (eq 'changed dotspacemacs-whitespace-cleanup)
+    :config
+    (progn
+      (ws-butler-global-mode 1)
+      (spacemacs|hide-lighter ws-butler-mode))))
 
 (defun spacemacs-base/init-winner ()
   (use-package winner
