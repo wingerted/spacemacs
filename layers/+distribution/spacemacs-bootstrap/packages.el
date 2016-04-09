@@ -37,6 +37,9 @@
 
 (defun spacemacs-bootstrap/init-evil ()
   ;; evil-mode is mandatory for Spacemacs to work properly
+  ;; evil must be require explicitly, the autoload seems to not
+  ;; work properly sometimes.
+  (require 'evil)
   (evil-mode 1)
   (require 'cl)
   ;; State cursors
@@ -70,8 +73,10 @@
   ;; https://bitbucket.org/lyro/evil/issue/502/cursor-is-not-refreshed-in-some-cases
   ;; (add-hook 'post-command-hook 'evil-refresh-cursor)
 
-  (setq evil-want-Y-yank-to-eol dotspacemacs-remap-Y-to-y$
-        evil-ex-substitute-global dotspacemacs-ex-substitute-global)
+  (setq evil-ex-substitute-global dotspacemacs-ex-substitute-global)
+
+  ;; evil-want-Y-yank-to-eol must be set via customize to have an effect
+  (custom-set-variables `(evil-want-Y-yank-to-eol ,dotspacemacs-remap-Y-to-y$))
 
   ;; bind evil-jump-forward for GUI only.
   (define-key evil-motion-state-map [C-i] 'evil-jump-forward)
@@ -105,6 +110,10 @@
   ;; Keep the region active when shifting
   (evil-map visual "<" "<gv")
   (evil-map visual ">" ">gv")
+
+  ;; move selection up and down
+  (define-key evil-visual-state-map "J" (concat ":m '>+1" (kbd "RET") "gv=gv"))
+  (define-key evil-visual-state-map "K" (concat ":m '<-2" (kbd "RET") "gv=gv"))
 
   (evil-ex-define-cmd "enew" 'spacemacs/new-empty-buffer)
 

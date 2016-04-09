@@ -201,6 +201,10 @@
             (neotree-find (projectile-project-root))
             (neotree-find origin-buffer-file-name))))
 
+      (defun spacemacs//neotree-maybe-attach-window ()
+        (when (get-buffer-window (neo-global--get-buffer))
+          (neo-global--attach)))
+
       (defun spacemacs//neotree-key-bindings ()
         "Set the key bindings for a neotree buffer."
         (evilified-state-evilify-map neotree-mode-map
@@ -230,7 +234,10 @@
         "pt" 'neotree-find-project-root))
 
     :config
-    (spacemacs//neotree-key-bindings)))
+    (progn
+      (spacemacs//neotree-key-bindings)
+      (add-hook 'persp-activated-hook #'spacemacs//neotree-maybe-attach-window)
+      (add-hook 'eyebrowse-post-window-switch-hook #'spacemacs//neotree-maybe-attach-window))))
 
 (defun spacemacs-ui-visual/init-smooth-scrolling ()
   (use-package smooth-scrolling
@@ -263,7 +270,8 @@
 
 (defun spacemacs-ui-visual/init-spaceline ()
   (use-package spaceline-config
-    :defer 0.1
+    ;; not possible for now, maybe we can add support for it in spaceline itself
+    ;; :defer 0.1
     :init
     (progn
       (spacemacs|do-after-display-system-init

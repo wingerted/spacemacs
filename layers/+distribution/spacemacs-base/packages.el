@@ -13,6 +13,8 @@
       '(
         (bookmark :location built-in)
         diminish
+        (dired :location built-in)
+        (dired-x :location built-in)
         (electric-indent-mode :location built-in)
         (ediff :location built-in)
         (eldoc :location built-in)
@@ -58,9 +60,11 @@
   (use-package bookmark
     :defer t
     :init
-    (setq bookmark-default-file (concat spacemacs-cache-directory "bookmarks")
-          ;; autosave each change
-          bookmark-save-flag 1)))
+    (progn
+      (setq bookmark-default-file (concat spacemacs-cache-directory "bookmarks")
+            ;; autosave each change
+            bookmark-save-flag 1)
+      (spacemacs/set-leader-keys "fb" 'bookmark-jump))))
 
 (defun spacemacs-base/init-diminish ()
   (use-package diminish
@@ -83,17 +87,19 @@
         (when (eval-when-compile (version< "24.3.1" emacs-version))
           (diminish 'subword-mode))))))
 
-(defun spacemacs-base/init-eldoc ()
-  (use-package eldoc
-    :defer t
-    :config
-    (progn
-      ;; enable eldoc in `eval-expression'
-      (add-hook 'eval-expression-minibuffer-setup-hook #'eldoc-mode)
-      ;; enable eldoc in IELM
-      (add-hook 'ielm-mode-hook #'eldoc-mode)
-      ;; don't display eldoc on modeline
-      (spacemacs|hide-lighter eldoc-mode))))
+(defun spacemacs-base/init-dired ()
+  (spacemacs/set-leader-keys
+    "ad" 'dired
+    "fj" 'dired-jump
+    "jd" 'dired-jump
+    "jD" 'dired-jump-other-window))
+
+(defun spacemacs-base/init-dired-x ()
+  (use-package dired-x
+    :commands (dired-jump
+               dired-jump-other-window
+               dired-omit-mode)))
+
 
 (defun spacemacs-base/init-electric-indent-mode ()
   (electric-indent-mode))
@@ -496,6 +502,7 @@
                projectile-recentf
                projectile-regenerate-tags
                projectile-replace
+               projectile-replace-regexp
                projectile-run-async-shell-command-in-root
                projectile-run-shell-command-in-root
                projectile-switch-project
@@ -525,6 +532,7 @@
       (spacemacs/set-leader-keys
         "p!" 'projectile-run-shell-command-in-root
         "p&" 'projectile-run-async-shell-command-in-root
+        "p%" 'projectile-replace-regexp
         "pa" 'projectile-toggle-between-implementation-and-test
         "pc" 'projectile-compile-project
         "pD" 'projectile-dired

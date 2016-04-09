@@ -116,7 +116,7 @@ of a list then all discovered layers will be installed.")
                               solarized-light
                               leuven)
   "List of themes, the first of the list is loaded when spacemacs starts.
-Press <SPC> T n to cycle to the next theme in the list (works great
+Press `SPC T n' to cycle to the next theme in the list (works great
 with 2 themes variants, one dark and one light")
 
 (defvar dotspacemacs-colorize-cursor-according-to-state t
@@ -629,6 +629,7 @@ error recovery."
   "Test settings in dotfile for correctness.
  Return non-nil if all the tests passed."
   (interactive)
+  (setq configuration-layer-paths (configuration-layer//discover-layers))
   (let ((min-version "0.0"))
     ;; dotspacemacs-version not implemented yet
     ;; (if (version< dotspacemacs-version min-version)
