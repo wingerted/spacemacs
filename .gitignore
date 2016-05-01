@@ -44,6 +44,5 @@ python-*-docs-html
 /.cask/
 
 # Private directory
-private/
 /games/
 srecode-map.el
