@@ -20,6 +20,7 @@
     company-ycmd
     flycheck
     gdb-mi
+    google-c-style
     helm-cscope
     helm-gtags
     semantic
@@ -72,6 +73,9 @@
   (when c-c++-enable-clang-support
     (push 'company-clang company-backends-c-mode-common)
 
+    (when c-c++-enable-c++11
+      (setq company-clang-arguments '("-std=c++11")))
+
     (defun company-mode/more-than-prefix-guesser ()
       (c-c++/load-clang-args)
       (company-clang-guess-prefix))
@@ -90,7 +94,9 @@
   (dolist (mode '(c-mode c++-mode))
     (spacemacs/add-flycheck-hook mode))
   (when c-c++-enable-clang-support
-    (spacemacs/add-to-hooks 'c-c++/load-clang-args '(c-mode-hook c++-mode-hook))))
+    (spacemacs/add-to-hooks 'c-c++/load-clang-args '(c-mode-hook c++-mode-hook))
+    (when c-c++-enable-c++11
+      (setq flycheck-clang-language-standard "c++11"))))
 
 (defun c-c++/init-gdb-mi ()
   (use-package gdb-mi
@@ -106,6 +112,13 @@
   (defun c-c++/post-init-helm-gtags ()
     (spacemacs/helm-gtags-define-keys-for-mode 'c-mode)
     (spacemacs/helm-gtags-define-keys-for-mode 'c++-mode)))
+
+(defun c-c++/init-google-c-style ()
+  (use-package google-c-style
+    :if (or 'c-c++-enable-google-style 'c-c++-enable-google-newline)
+    :config (progn
+              (when 'c-c++-enable-google-style (add-hook 'c-mode-common-hook 'google-set-c-style))
+              (when 'c-c++-enable-google-newline (add-hook 'c-mode-common-hook 'google-set-c-style)))))
 
 (defun c-c++/post-init-semantic ()
   (spacemacs/add-to-hooks 'semantic-mode '(c-mode-hook c++-mode-hook)))
