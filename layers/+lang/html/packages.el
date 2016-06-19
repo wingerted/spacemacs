@@ -12,13 +12,13 @@
 (setq html-packages
   '(
     company
-    company-web
+    (company-web :toggle (configuration-layer/package-usedp 'company))
     css-mode
     emmet-mode
     evil-matchit
     flycheck
     haml-mode
-    helm-css-scss
+    (helm-css-scss :toggle (configuration-layer/package-usedp 'helm))
     jade-mode
     less-css-mode
     sass-mode
@@ -30,16 +30,15 @@
     yasnippet
     ))
 
-(when (configuration-layer/layer-usedp 'auto-completion)
-  ;;TODO: whenever company-web makes a backend for haml-mode it should be added here. -- @robbyoconnor
-  (defun html/post-init-company ()
-    (spacemacs|add-company-hook css-mode)
-    (spacemacs|add-company-hook jade-mode)
-    (spacemacs|add-company-hook slim-mode)
-    (spacemacs|add-company-hook web-mode))
+;;TODO: whenever company-web makes a backend for haml-mode it should be added here. -- @robbyoconnor
+(defun html/post-init-company ()
+  (spacemacs|add-company-hook css-mode)
+  (spacemacs|add-company-hook jade-mode)
+  (spacemacs|add-company-hook slim-mode)
+  (spacemacs|add-company-hook web-mode))
 
-  (defun html/init-company-web ()
-    (use-package company-web)))
+(defun html/init-company-web ()
+  (use-package company-web))
 
 (defun html/init-css-mode ()
   (use-package css-mode
@@ -117,13 +116,12 @@
   (use-package haml-mode
     :defer t))
 
-(when (configuration-layer/layer-usedp 'helm)
-  (defun html/init-helm-css-scss ()
-    (use-package helm-css-scss
-      :defer t
-      :init
-      (dolist (mode '(css-mode scss-mode))
-        (spacemacs/set-leader-keys-for-major-mode mode "gh" 'helm-css-scss)))))
+(defun html/init-helm-css-scss ()
+  (use-package helm-css-scss
+    :defer t
+    :init
+    (dolist (mode '(css-mode scss-mode))
+      (spacemacs/set-leader-keys-for-major-mode mode "gh" 'helm-css-scss))))
 
 (defun html/init-jade-mode ()
   (use-package jade-mode
@@ -216,6 +214,7 @@
         :title "Web-mode Transient State"
         :columns 4
         :foreign-keys run
+        :evil-leader-for-mode (web-mode . ".")
         :bindings
         ("j" web-mode-element-next "next")
         ("J" web-mode-element-sibling-next "next sibling")
@@ -232,9 +231,7 @@
         ("w" web-mode-element-wrap "wrap")
         ("p" web-mode-dom-xpath "xpath")
         ("q" nil "quit" :exit t)
-        ("<escape>" nil nil :exit t))
-      (spacemacs/set-leader-keys-for-major-mode 'web-mode
-        "." 'spacemacs/web-mode-transient-state/body))
+        ("<escape>" nil nil :exit t)))
 
     :mode
     (("\\.phtml\\'"      . web-mode)

@@ -16,7 +16,7 @@
     clang-format
     cmake-mode
     company
-    company-c-headers
+    (company-c-headers :toggle (configuration-layer/package-usedp 'company))
     company-ycmd
     flycheck
     gdb-mi
@@ -83,12 +83,10 @@
     (setq company-clang-prefix-guesser 'company-mode/more-than-prefix-guesser)
     (spacemacs/add-to-hooks 'c-c++/load-clang-args '(c-mode-hook c++-mode-hook))))
 
-(when (configuration-layer/layer-usedp 'auto-completion)
-  (defun c-c++/init-company-c-headers ()
-    (use-package company-c-headers
-      :if (configuration-layer/package-usedp 'company)
-      :defer t
-      :init (push 'company-c-headers company-backends-c-mode-common))))
+(defun c-c++/init-company-c-headers ()
+  (use-package company-c-headers
+    :defer t
+    :init (push 'company-c-headers company-backends-c-mode-common)))
 
 (defun c-c++/post-init-flycheck ()
   (dolist (mode '(c-mode c++-mode))
@@ -108,10 +106,9 @@
      ;; Non-nil means display source file containing the main routine at startup
      gdb-show-main t)))
 
-(when (configuration-layer/layer-usedp 'helm)
-  (defun c-c++/post-init-helm-gtags ()
-    (spacemacs/helm-gtags-define-keys-for-mode 'c-mode)
-    (spacemacs/helm-gtags-define-keys-for-mode 'c++-mode)))
+(defun c-c++/post-init-helm-gtags ()
+  (spacemacs/helm-gtags-define-keys-for-mode 'c-mode)
+  (spacemacs/helm-gtags-define-keys-for-mode 'c++-mode))
 
 (defun c-c++/init-google-c-style ()
   (use-package google-c-style
@@ -146,9 +143,8 @@
     (dolist (mode '(c-mode c++-mode))
       (spacemacs/set-leader-keys-for-major-mode mode "gi" 'cscope-index-files))))
 
-(when (configuration-layer/layer-usedp 'helm)
-  (defun c-c++/pre-init-helm-cscope ()
-    (spacemacs|use-package-add-hook xcscope
-      :post-init
-      (dolist (mode '(c-mode c++-mode))
-        (spacemacs/setup-helm-cscope mode)))))
+(defun c-c++/pre-init-helm-cscope ()
+  (spacemacs|use-package-add-hook xcscope
+    :post-init
+    (dolist (mode '(c-mode c++-mode))
+      (spacemacs/setup-helm-cscope mode))))
