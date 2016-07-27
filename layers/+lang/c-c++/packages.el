@@ -20,6 +20,7 @@
     company-ycmd
     flycheck
     gdb-mi
+    ggtags
     google-c-style
     helm-cscope
     helm-gtags
@@ -90,6 +91,10 @@
     (spacemacs/add-flycheck-hook mode))
   (when c-c++-enable-clang-support
     (spacemacs/add-to-hooks 'c-c++/load-clang-args '(c-mode-hook c++-mode-hook))))
+
+(defun c-c++/post-init-ggtags ()
+  (add-hook 'c-mode-hook #'spacemacs/ggtags-mode-enable)
+  (add-hook 'c++-mode-hook #'spacemacs/ggtags-mode-enable))
 
 (defun c-c++/init-gdb-mi ()
   (use-package gdb-mi

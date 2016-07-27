@@ -30,7 +30,7 @@
         ;; https://github.com/7696122/evil-terminal-cursor-changer/issues/8
         ;; evil-terminal-cursor-changer
         evil-tutor
-        (evil-unimpaired :location local)
+        (evil-unimpaired :location (recipe :fetcher local))
         evil-visual-mark-mode
         (hs-minor-mode :location built-in)
         linum-relative
@@ -207,7 +207,8 @@
       (define-key evil-search-highlight-persist-map (kbd "C-x SPC") 'rectangle-mark-mode)
       (evil-ex-define-cmd "nohlsearch"
                           'evil-search-highlight-persist-remove-all)
-      (spacemacs//adaptive-evil-highlight-persist-face))))
+      (spacemacs//adaptive-evil-highlight-persist-face)
+      (add-hook 'spacemacs-post-theme-change-hook 'spacemacs//adaptive-evil-highlight-persist-face))))
 
 (defun spacemacs-evil/init-evil-surround ()
   (use-package evil-surround

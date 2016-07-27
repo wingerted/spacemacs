@@ -3,6 +3,7 @@
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; Keywords: evil, vim-unimpaired, spacemacs
 ;; Version: 0.1
+;; Package-Requires: ((dash "2.12.0") (f "0.18.0"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -90,8 +91,8 @@
 (define-key evil-visual-state-map (kbd "] e") ":move'>+1")
 ;; (define-key evil-visual-state-map (kbd "[ e") 'move-text-up)
 ;; (define-key evil-visual-state-map (kbd "] e") 'move-text-down)
-(define-key evil-normal-state-map (kbd "[ b") 'spacemacs/previous-useful-buffer)
-(define-key evil-normal-state-map (kbd "] b") 'spacemacs/next-useful-buffer)
+(define-key evil-normal-state-map (kbd "[ b") 'previous-buffer)
+(define-key evil-normal-state-map (kbd "] b") 'next-buffer)
 (define-key evil-normal-state-map (kbd "[ f") 'evil-unimpaired/previous-file)
 (define-key evil-normal-state-map (kbd "] f") 'evil-unimpaired/next-file)
 (define-key evil-normal-state-map (kbd "] l") 'spacemacs/next-error)

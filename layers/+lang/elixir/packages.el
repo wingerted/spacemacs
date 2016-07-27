@@ -16,6 +16,8 @@
     elixir-mode
     flycheck
     flycheck-mix
+    ggtags
+    helm-gtags
     popwin
     smartparens
     ))
@@ -141,7 +143,7 @@
     :post-config
     (push '("*mix*" :tail t :noselect t) popwin:special-display-config)))
 
-(defun elixir/post-init-smartparens ()
+(defun elixir/pre-init-smartparens ()
   (spacemacs|use-package-add-hook smartparens
     :post-config
     (progn
@@ -157,3 +159,9 @@
          :when '(("SPC" "RET"))
          :post-handlers '(:add spacemacs//elixir-do-end-close-action)
          :actions '(insert))))))
+
+(defun elixir/post-init-ggtags ()
+  (add-hook 'elixir-mode-hook #'spacemacs/ggtags-mode-enable))
+
+(defun elixir/post-init-helm-gtags ()
+  (spacemacs/helm-gtags-define-keys-for-mode 'elixir-mode))
