@@ -61,19 +61,6 @@
   (let ((message-log-max nil))
     (apply 'message msg args)))
 
-(defun spacemacs/jump-in-buffer ()
-  (interactive)
-  (call-interactively
-   (cond
-    ((and (configuration-layer/layer-usedp 'helm)
-          (eq major-mode 'org-mode))
-     'helm-org-in-buffer-headings)
-    ((configuration-layer/layer-usedp 'helm)
-     'helm-semantic-or-imenu)
-    ((configuration-layer/layer-usedp 'ivy)
-     'counsel-imenu)
-    (t 'imenu))))
-
 (defun spacemacs/split-and-new-line ()
   "Split a quoted string or s-expression and insert a new line with
 auto-indent."
@@ -229,9 +216,9 @@ automatically applied to."
 
 ;; from magnars modified by ffevotte for dedicated windows support
 (defun spacemacs/rotate-windows (count)
-  "Rotate your windows.
-Dedicated windows are left untouched. Giving a negative prefix
-argument takes the kindows rotate backwards."
+  "Rotate each window forwards.
+A negative prefix argument rotates each window backwards.
+Dedicated (locked) windows are left untouched."
   (interactive "p")
   (let* ((non-dedicated-windows (remove-if 'window-dedicated-p (window-list)))
          (num-windows (length non-dedicated-windows))
@@ -258,7 +245,8 @@ argument takes the kindows rotate backwards."
                (setq i next-i)))))))
 
 (defun spacemacs/rotate-windows-backward (count)
-  "Rotate your windows backward."
+  "Rotate each window backwards.
+Dedicated (locked) windows are left untouched."
   (interactive "p")
   (spacemacs/rotate-windows (* -1 count)))
 
@@ -761,10 +749,14 @@ If JUSTIFY-RIGHT is non nil justify to the right instead of the
 left. If AFTER is non-nil, add whitespace to the left instead of
 the right."
   (interactive "r\nsAlign regexp: ")
-  (let ((complete-regexp (if after
-                             (concat regexp "\\([ \t]*\\)")
-                           (concat "\\([ \t]*\\)" regexp)))
-        (group (if justify-right -1 1)))
+  (let* ((ws-regexp (if (string-empty-p regexp)
+                        "\\(\\s-+\\)"
+                      "\\(\\s-*\\)"))
+         (complete-regexp (if after
+                              (concat regexp ws-regexp)
+                            (concat ws-regexp regexp)))
+         (group (if justify-right -1 1)))
+    (message "%S" complete-regexp)
     (align-regexp start end complete-regexp group 1 t)))
 
 ;; Modified answer from http://emacs.stackexchange.com/questions/47/align-vertical-columns-of-numbers-on-the-decimal-point
