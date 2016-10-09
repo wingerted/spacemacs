@@ -665,12 +665,18 @@ The body of the advice is in BODY."
   (if (y-or-n-p (format "Erase content of buffer %s ? " (current-buffer)))
       (erase-buffer)))
 
+(defun spacemacs//find-ert-test-buffer (ert-test)
+  "Return the buffer where ERT-TEST is defined."
+  (car (find-definition-noselect (ert-test-name ert-test) 'ert-deftest)))
+
 (defun spacemacs/ert-run-tests-buffer ()
   "Run all the tests in the current buffer."
   (interactive)
   (save-buffer)
   (load-file (buffer-file-name))
-  (ert t))
+  (let ((cbuf (current-buffer)))
+    (ert '(satisfies (lambda (test)
+                       (eq cbuf (spacemacs//find-ert-test-buffer test)))))))
 
 (defun spacemacs/alternate-buffer (&optional window)
   "Switch back and forth between current and last buffer in the
@@ -977,7 +983,7 @@ a split-side entry, its value must be usable as the SIDE argument for
     (pop-to-buffer buffer '(spacemacs//display-in-split (split-side . right)))))
 
 (defun spacemacs/find-file-split (file)
-  "find file in horizonatl split"
+  "find file in horizontal split"
   (interactive "FFind file (split): ")
   (let ((buffer (find-file-noselect file)))
     (pop-to-buffer buffer '(spacemacs//display-in-split (split-side . below)))))
@@ -1027,6 +1033,15 @@ is nonempty."
   "Disable linum if current buffer."
   (when (or 'linum-mode global-linum-mode)
     (linum-mode 0)))
+
+(defun linum-update-window-scale-fix (win)
+  "Fix linum for scaled text in the window WIN."
+  (set-window-margins win
+                      (ceiling (* (if (boundp 'text-scale-mode-step)
+                                      (expt text-scale-mode-step
+                                            text-scale-mode-amount) 1)
+                                  (if (car (window-margins))
+                                      (car (window-margins)) 1)))))
 
 
 ;; Generalized next-error system ("gne")

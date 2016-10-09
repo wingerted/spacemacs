@@ -8,7 +8,7 @@
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; License: GPLv3
-(defconst spacemacs-buffer-version-info "0.105"
+(defconst spacemacs-buffer-version-info "0.200"
   "Current version used to display addition release information.")
 
 (defconst spacemacs-buffer-name "*spacemacs*"
@@ -54,8 +54,10 @@ version the release note it displayed")
 (defvar spacemacs-buffer-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map [tab] 'widget-forward)
+    (define-key map (kbd "j") 'widget-forward)
     (define-key map (kbd "C-i") 'widget-forward)
     (define-key map [backtab] 'widget-backward)
+    (define-key map (kbd "k") 'widget-backward)
     (define-key map (kbd "RET") 'widget-button-press)
     (define-key map [down-mouse-1] 'widget-button-click)
     (define-key map "q" 'quit-window)
