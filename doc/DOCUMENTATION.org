@@ -457,7 +457,7 @@ guidelines first in [[file:../CONTRIBUTING.org][CONTRIBUTING]].
 
 ** Example: Themes Megapack example
 This is a simple configuration layer listing a bunch of themes which you can
-find [[../layers/themes-megapack/README.org][here]].
+find [[../layers/+themes/themes-megapack/README.org][here]].
 
 To install it, just add =themes-megapack= to your =~/.spacemacs= like so:
 
@@ -1086,6 +1086,7 @@ and ~T~):
 | ~SPC t h h~ | toggle highlight of the current line                              |
 | ~SPC t h i~ | toggle highlight indentation levels                               |
 | ~SPC t h c~ | toggle highlight indentation current column                       |
+| ~SPC t h s~ | toggle syntax highlighting                                        |
 | ~SPC t i~   | toggle indentation guide at point                                 |
 | ~SPC t l~   | toggle truncate lines                                             |
 | ~SPC t L~   | toggle visual lines                                               |
@@ -1152,7 +1153,8 @@ Some elements can be dynamically toggled:
 | ~SPC t m M~ | toggle the major mode                                           |
 | ~SPC t m n~ | toggle the cat! (if =colors= layer is declared in your dotfile) |
 | ~SPC t m p~ | toggle the point character position                             |
-| ~SPC t m t~ | toggle the mode line itself                                     |
+| ~SPC t m t~ | toggle the time                                                 |
+| ~SPC t m T~ | toggle the mode line itself                                     |
 | ~SPC t m v~ | toggle the version control info                                 |
 | ~SPC t m V~ | toggle the new version lighter                                  |
 
@@ -1265,7 +1267,7 @@ can be reached using the =control= key.
 | ~SPC t p~   | =ⓟ=     | p     | [[https://github.com/Fuco1/smartparens][smartparens]] mode                                                     |
 | ~SPC t C-p~ | =ⓟ=     | p     | global smartparens                                                   |
 | ~SPC t s~   | =ⓢ=     | s     | syntax checking (flycheck)                                           |
-| ~SPC t S~   | =Ⓢ=     | S     | enabled in [[../layers/spell-checking][spell checking layer]] (flyspell)                           |
+| ~SPC t S~   | =Ⓢ=     | S     | enabled in [[../layers/+checkers/spell-checking][spell checking layer]] (flyspell)                           |
 | ~SPC t w~   | =ⓦ=     | w     | whitespace mode                                                      |
 | ~SPC t C-w~ | =ⓦ=     | w     | global whitespace                                                    |
 | ~SPC t W~   | =Ⓦ=     | W     | automatic whitespace cleanup (see =dotspacemacs-whitespace-cleanup=) |
@@ -2657,7 +2659,7 @@ In transient state:
 argument (ie. ~10 SPC n +~ will add 10 to the number under point).
 
 *** Spell checking
-Spell checking is enabled by including the [[../layers/spell-checking][spell
+Spell checking is enabled by including the [[../layers/+checkers/spell-checking][spell
 checking]] layer in your dotfile.
 
 Keybindings are listed in the layer documentation.
@@ -2814,6 +2816,7 @@ Comments are handled by [[https://github.com/redguardtoo/evil-nerd-commenter][ev
 | Key Binding | Description               |
 |-------------+---------------------------|
 | ~SPC ;~     | comment operator          |
+| ~SPC c h~   | hide/show comments        |
 | ~SPC c l~   | comment lines             |
 | ~SPC c L~   | invert comment lines      |
 | ~SPC c p~   | comment paragraphs        |
@@ -3178,31 +3181,31 @@ with ~SPC SPC spacemacs/recompile-elpa~.
 | [[https://github.com/syl20bnr/spacemacs/pull/4089][2000th pull request]] | [[https://github.com/channingwalton][channingwalton]] |
 | [[https://github.com/syl20bnr/spacemacs/pull/6338][3000th pull request]] | [[https://github.com/darkfeline][darkfeline]]     |
 
-
 ** Stars, forks and watchers
 
-| Achievements        | Account         |
-|---------------------+-----------------|
-| 100th watcher       | [[https://github.com/adouzzy][adouzzy]]         |
-| 100th fork          | [[https://github.com/balajisivaraman][balajisivaraman]] |
-| 200th fork          | [[https://github.com/alcol80][alcol80]]         |
-| 300th fork          | [[https://github.com/mlopes][mlopes]]          |
-| 2000th fork         | [[https://github.com/Gameguykiler][Gameguykiler]]    |
-| 100th star          | [[https://github.com/Jackneill][Jackneill]]       |
-| 200th star          | [[https://github.com/jb55][jb55]]            |
-| 400th star          | [[https://github.com/dbohdan][dbohdan]]         |
-| 600th star          | [[https://github.com/laat][laat]]            |
-| 700th star          | [[https://github.com/kendall][kendall]]         |
-| 800th star          | [[https://github.com/urso][urso]]            |
-| 900th star          | [[https://github.com/luisgerhorst][luisgerhorst]]    |
-| 1000th star!        | [[https://github.com/rashly][rashly]]          |
-| 2000th star!!       | [[https://github.com/stshine][stshine]]         |
-| 3000th star!!!      | [[https://github.com/TheBB][TheBB]]           |
-| 4000th star!!!!     | [[https://github.com/nixmaniack][nixmaniack]]      |
-| 5000th star!!!!!    | [[https://github.com/StreakyCobra][StreakyCobra]]    |
-| 6000th star!!!!!!   | [[https://github.com/NJBS][NJBS]]            |
-| 7000th star!!!!!!!  | [[https://github.com/mukhali][mukhali]]         |
-| 8000th star!!!!!!!! | [[https://github.com/shsteven][shsteven]]        |
+| Achievements         | Account         |
+|----------------------+-----------------|
+| 100th watcher        | [[https://github.com/adouzzy][adouzzy]]         |
+| 100th fork           | [[https://github.com/balajisivaraman][balajisivaraman]] |
+| 200th fork           | [[https://github.com/alcol80][alcol80]]         |
+| 300th fork           | [[https://github.com/mlopes][mlopes]]          |
+| 2000th fork          | [[https://github.com/Gameguykiler][Gameguykiler]]    |
+| 100th star           | [[https://github.com/Jackneill][Jackneill]]       |
+| 200th star           | [[https://github.com/jb55][jb55]]            |
+| 400th star           | [[https://github.com/dbohdan][dbohdan]]         |
+| 600th star           | [[https://github.com/laat][laat]]            |
+| 700th star           | [[https://github.com/kendall][kendall]]         |
+| 800th star           | [[https://github.com/urso][urso]]            |
+| 900th star           | [[https://github.com/luisgerhorst][luisgerhorst]]    |
+| 1000th star!         | [[https://github.com/rashly][rashly]]          |
+| 2000th star!!        | [[https://github.com/stshine][stshine]]         |
+| 3000th star!!!       | [[https://github.com/TheBB][TheBB]]           |
+| 4000th star!!!!      | [[https://github.com/nixmaniack][nixmaniack]]      |
+| 5000th star!!!!!     | [[https://github.com/StreakyCobra][StreakyCobra]]    |
+| 6000th star!!!!!!    | [[https://github.com/NJBS][NJBS]]            |
+| 7000th star!!!!!!!   | [[https://github.com/mukhali][mukhali]]         |
+| 8000th star!!!!!!!!  | [[https://github.com/shsteven][shsteven]]        |
+| 9000th star!!!!!!!!! | [[https://github.com/deb0ch][deb0ch]]          |
 
 ** Gitter chat
 

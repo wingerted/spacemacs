@@ -53,15 +53,18 @@ version the release note it displayed")
 
 (defvar spacemacs-buffer-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [tab] 'widget-forward)
-    (define-key map (kbd "j") 'widget-forward)
-    (define-key map (kbd "C-i") 'widget-forward)
-    (define-key map [backtab] 'widget-backward)
-    (define-key map (kbd "k") 'widget-backward)
-    (define-key map (kbd "RET") 'widget-button-press)
     (define-key map [down-mouse-1] 'widget-button-click)
-    (define-key map "q" 'quit-window)
+    (define-key map (kbd "RET") 'widget-button-press)
+
+    (define-key map [tab] 'widget-forward)
+    (define-key map (kbd "J") 'widget-forward)
+    (define-key map (kbd "C-i") 'widget-forward)
+
+    (define-key map [backtab] 'widget-backward)
+    (define-key map (kbd "K") 'widget-backward)
+
     (define-key map (kbd "C-r") 'spacemacs-buffer/refresh)
+    (define-key map "q" 'quit-window)
     map)
   "Keymap for spacemacs buffer mode.")
 
@@ -274,6 +277,14 @@ HELP-STRING is the help message of the button for additional action."
     (let* ((note (concat "\n" (spacemacs//render-framed-text
                                file spacemacs-buffer--banner-length caption))))
       (add-to-list 'spacemacs-buffer--note-widgets (widget-create 'text note))
+      (save-excursion
+        (while (re-search-backward "\\[\\[\\(.*\\)\\]\\]" nil t)
+          (let ((buffer-read-only nil))
+            (make-text-button
+             (match-beginning 1)
+             (match-end 1)
+             'type 'help-url
+             'help-args (list (match-string 1))))))
       (funcall additional-widgets))))
 
 (defun spacemacs-buffer//insert-note-p (type)
@@ -399,10 +410,15 @@ The message is displayed only if `init-file-debug' is non nil."
   (when init-file-debug
     (message "(Spacemacs) %s" (apply 'format msg args))))
 
+(defvar spacemacs-buffer--warnings nil
+  "List of warnings during startup.")
+
 (defun spacemacs-buffer/warning (msg &rest args)
-  "Display MSG as a warning message but in buffer `*Messages*'.
-The message is always displayed. "
-  (message "(Spacemacs) Warning: %s" (apply 'format msg args)))
+  "Display MSG as a warning message but in buffer `*Messages*'."
+  (let ((msg (apply 'format msg args)))
+    (message "(Spacemacs) Warning: %s" msg)
+    (when message-log-max
+      (add-to-list 'spacemacs-buffer--warnings msg 'append))))
 
 (defun spacemacs-buffer/insert-page-break ()
   "Insert a page break line in spacemacs buffer."
@@ -659,6 +675,22 @@ border."
     (spacemacs-buffer//center-line)
     (insert "\n\n"))
 
+(defun spacemacs-buffer//insert-string-list (list-display-name list)
+  (when (car list)
+    (insert list-display-name)
+    (mapc (lambda (el)
+            (insert
+             "\n"
+             (with-temp-buffer
+               (insert el)
+               (fill-paragraph)
+               (goto-char (point-min))
+               (insert "    - ")
+               (while (= 0 (forward-line))
+                 (insert "      "))
+               (buffer-string))))
+          list)))
+
 (defun spacemacs-buffer//insert-file-list (list-display-name list)
   (when (car list)
     (insert list-display-name)
@@ -800,6 +832,12 @@ list. Return entire list if `END' is omitted."
                      (or (cdr-safe els)
                          spacemacs-buffer-startup-lists-length)))
                 (cond
+                 ((eq el 'warnings)
+                  (when (spacemacs-buffer//insert-string-list
+                         "Warnings:"
+                         spacemacs-buffer--warnings)
+                    (spacemacs//insert--shortcut "w" "Warnings:")
+                    (insert list-separator)))
                  ((eq el 'recents)
                   (recentf-mode)
                   (when (spacemacs-buffer//insert-file-list
@@ -839,7 +877,10 @@ list. Return entire list if `END' is omitted."
                          (spacemacs//subseq (projectile-relevant-known-projects)
                                             0 list-size))
                     (spacemacs//insert--shortcut "p" "Projects:")
-                    (insert list-separator)))))) dotspacemacs-startup-lists)))
+                    (insert list-separator))))))
+            (append
+             '(warnings)
+             dotspacemacs-startup-lists))))
 
 (defun spacemacs-buffer//get-buffer-width ()
   (save-excursion
@@ -969,5 +1010,15 @@ already exist, and switch to it."
   (interactive)
   (setq spacemacs-buffer--last-width nil)
   (spacemacs-buffer/goto-buffer t))
+
+(defalias 'spacemacs/home 'spacemacs-buffer/refresh
+  "Go to home Spacemacs buffer")
+
+(defun spacemacs/home-delete-other-windows ()
+  "Open home Spacemacs buffer and delete other windows.
+Useful for making the home buffer the only visible buffer in the frame."
+  (interactive)
+  (spacemacs/home)
+  (delete-other-windows))
 
 (provide 'core-spacemacs-buffer)
