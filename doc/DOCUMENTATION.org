@@ -94,6 +94,7 @@
        - [[#c-z-and-tab-switch][C-z and Tab switch]]
        - [[#helm-focus][Helm focus]]
        - [[#helm-transient-state][Helm transient state]]
+     - [[#ivy][Ivy]]
    - [[#discovering][Discovering]]
      - [[#key-bindings][Key bindings]]
        - [[#which-key][Which-key]]
@@ -1587,6 +1588,19 @@ Initiate the transient state with ~M-SPC~ or ~s-M-SPC~ while in a =Helm= buffer.
 | ~T~                  | mark all candidates                                  |
 | ~v~                  | execute persistent action                            |
 
+*** Ivy
+If you choose =ivy= as completion system, make sure to read [[http://oremacs.com/swiper/][official manual]]. In
+case you don't want to read everything, at least familiarise with [[http://oremacs.com/swiper/#minibuffer-key-bindings][minibuffer key
+bindings]]. Some useful key bindings are presented in following table.
+
+| Key Binding    | Description                                                                                          |
+|----------------+------------------------------------------------------------------------------------------------------|
+| ~C-m~ or ~RET~ | call default action on current candidate                                                             |
+| ~M-o~          | show the list of valid actions on current candidate (then press any of described keys to execute it) |
+| ~C-M-m~        | the same as ~RET~ but doesn't close completion minibuffer                                            |
+| ~C-M-o~        | the same as ~M-o~ but doesn't close completion minibuffer                                            |
+| ~C-'~          | use avy to quickly select completion on current page (sometimes faster than using arrows)            |
+
 ** Discovering
 *** Key bindings
 **** Which-key
@@ -1967,11 +1981,12 @@ Buffer manipulation commands (start with ~b~):
 | ~SPC u SPC b d~ | kill the current buffer and window (does not delete the visited file)    |
 | ~SPC b D~       | kill a visible buffer using [[https://github.com/abo-abo/ace-window][ace-window]]                                   |
 | ~SPC u SPC b D~ | kill a visible buffer and its window using [[https://github.com/abo-abo/ace-window][ace-window]]                    |
-| ~SPC b C-d~     | kill buffers using a regular expression                                  |
+| ~SPC b C-d~     | kill other buffers                                                       |
+| ~SPC b C-D~     | kill buffers using a regular expression                                  |
 | ~SPC b e~       | erase the content of the buffer (ask for confirmation)                   |
 | ~SPC b h~       | open =*spacemacs*= home buffer                                           |
 | ~SPC b n~       | switch to next buffer avoiding special buffers                           |
-| ~SPC b m~       | kill all buffers except the current one                                  |
+| ~SPC b m~       | open =*Messages*= buffer                                                 |
 | ~SPC u SPC b m~ | kill all buffers and windows except the current one                      |
 | ~SPC b M~       | kill all buffers matching the regexp                                     |
 | ~SPC b p~       | switch to previous buffer avoiding special buffers                       |
@@ -2837,7 +2852,7 @@ Comments are handled by [[https://github.com/redguardtoo/evil-nerd-commenter][ev
 | ~SPC c y~   | comment and yank          |
 | ~SPC c Y~   | invert comment and yank   |
 
-*Tips:* To comment efficiently a block of line use the combo ~SPC ; SPC y~
+*Tips:* To comment efficiently a block of line use the combo ~SPC ; SPC j l~
 
 *** Regular expressions
 Spacemacs uses the packages [[https://github.com/joddie/pcre2el][pcre2el]] to manipulate regular expressions. It is
