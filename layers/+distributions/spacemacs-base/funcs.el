@@ -341,6 +341,13 @@ removal."
                  (projectile-project-p))
         (call-interactively #'projectile-invalidate-cache)))))
 
+(defun spacemacs/delete-file-confirm (filename)
+  "Remove specified file or directory after users approval.
+
+FILENAME is deleted using `spacemacs/delete-file' function.."
+  (interactive "f")
+  (funcall-interactively #'spacemacs/delete-file filename t))
+
 ;; from magnars
 (defun spacemacs/delete-current-buffer-file ()
   "Removes file connected to current buffer and kills buffer."
@@ -360,7 +367,7 @@ removal."
 
 ;; from magnars
 (defun spacemacs/sudo-edit (&optional arg)
-  (interactive "p")
+  (interactive "P")
   (let ((fname (if (or arg (not buffer-file-name))
                    (read-file-name "File: ")
                  buffer-file-name)))
