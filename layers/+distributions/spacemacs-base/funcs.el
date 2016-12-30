@@ -259,7 +259,14 @@ Dedicated (locked) windows are left untouched."
               (interactive "P")
               (if arg
                   (spacemacs/swap-buffers-to-window ,n t)
-                (spacemacs/move-buffer-to-window ,n t))))))
+                (spacemacs/move-buffer-to-window ,n t))))
+    (eval `(defun ,(intern (format "move-buffer-window-no-follow-%s" n)) ()
+             (interactive)
+             (spacemacs/move-buffer-to-window ,n nil)))
+    (eval `(defun ,(intern (format "swap-buffer-window-no-follow-%s" n)) ()
+             (interactive)
+             (spacemacs/swap-buffers-to-window ,n nil)))
+    ))
 
 (defun spacemacs/rename-file (filename &optional new-filename)
   "Rename FILENAME to NEW-FILENAME.
@@ -874,16 +881,12 @@ With negative N, comment out original line and use the absolute value."
 (defun spacemacs/select-current-block ()
   "Select the current block of text between blank lines."
   (interactive)
-  (let (p1 p2)
-    (progn
-      (if (re-search-backward "\n[ \t]*\n" nil "move")
-          (progn (re-search-forward "\n[ \t]*\n")
-                 (setq p1 (point)))
-        (setq p1 (point)))
-      (if (re-search-forward "\n[ \t]*\n" nil "move")
-          (progn (re-search-backward "\n[ \t]*\n")
-                 (setq p2 (point)))
-        (setq p2 (point))))
+  (let (p1)
+    (when (re-search-backward "\n[ \t]*\n" nil "move")
+      (re-search-forward "\n[ \t]*\n"))
+    (setq p1 (point))
+    (if (re-search-forward "\n[ \t]*\n" nil "move")
+        (re-search-backward "\n[ \t]*\n"))
     (set-mark p1)))
 
 ;; END linum mouse helpers
