@@ -22,8 +22,6 @@
   "If non-nil `google-make-newline-indent' will be added as as
    `c-mode-common-hook'.")
 
-(spacemacs|defvar-company-backends c-mode-common)
-(spacemacs|defvar-company-backends cmake-mode)
 
 (spacemacs|define-jump-handlers c++-mode)
 (spacemacs|define-jump-handlers c-mode)
