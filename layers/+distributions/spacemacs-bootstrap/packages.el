@@ -1,6 +1,6 @@
 ;;; packages.el --- Mandatory Bootstrap Layer packages File
 ;;
-;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2017 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -135,21 +135,55 @@
 
   (define-key evil-normal-state-map (kbd "K") 'spacemacs/evil-smart-doc-lookup)
   (define-key evil-normal-state-map (kbd "gd") 'spacemacs/jump-to-definition)
+  (define-key evil-normal-state-map (kbd "gD") 'spacemacs/jump-to-definition-other-window)
 
   ;; scrolling transient state
   (spacemacs|define-transient-state scroll
     :title "Scrolling Transient State"
+    :doc "
+ Buffer^^^^              Full page^^^^     Half page^^^^        Line/column^^^^
+ ──────^^^^───────────── ─────────^^^^──── ─────────^^^^─────── ───────────^^^^─────
+ [_<_/_>_] beginning/end [_f_/_b_] down/up [_J_/_K_] down/up    [_j_/_k_] down/up
+  ^ ^ ^ ^                 ^ ^ ^ ^          [_H_/_L_] left/right [_h_/_l_] left/right
+  ^ ^ ^ ^                 ^ ^ ^ ^          [_d_/_u_] down/up     ^ ^ ^ ^"
     :bindings
-    ("," evil-scroll-page-up "page up")
-    ("." evil-scroll-page-down "page down")
+    ;; buffer
+    ("<" evil-goto-first-line)
+    (">" evil-goto-line)
+    ;; full page
+    ("f" evil-scroll-page-down)
+    ("b" evil-scroll-page-up)
     ;; half page
-    ("<" evil-scroll-up "half page up")
-    (">" evil-scroll-down "half page down"))
+    ("d" evil-scroll-down)
+    ("u" evil-scroll-up)
+    ("J" evil-scroll-down)
+    ("K" evil-scroll-up)
+    ("H" evil-scroll-left)
+    ("L" evil-scroll-right)
+    ;; lines and columns
+    ("j" evil-scroll-line-down)
+    ("k" evil-scroll-line-up)
+    ("h" evil-scroll-column-left)
+    ("l" evil-scroll-column-right))
   (spacemacs/set-leader-keys
-    "n," 'spacemacs/scroll-transient-state/evil-scroll-page-up
-    "n." 'spacemacs/scroll-transient-state/evil-scroll-page-down
-    "n<" 'spacemacs/scroll-transient-state/evil-scroll-up
-    "n>" 'spacemacs/scroll-transient-state/evil-scroll-down)
+    ;; buffer
+    "N<" 'spacemacs/scroll-transient-state/evil-goto-first-line
+    "N>" 'spacemacs/scroll-transient-state/evil-goto-line
+    ;; full page
+    "Nf" 'spacemacs/scroll-transient-state/evil-scroll-page-down
+    "Nb" 'spacemacs/scroll-transient-state/evil-scroll-page-up
+    ;; half page
+    "Nd" 'spacemacs/scroll-transient-state/evil-scroll-down
+    "Nu" 'spacemacs/scroll-transient-state/evil-scroll-up
+    "NJ" 'spacemacs/scroll-transient-state/evil-scroll-down
+    "NK" 'spacemacs/scroll-transient-state/evil-scroll-up
+    "NH" 'spacemacs/scroll-transient-state/evil-scroll-left
+    "NL" 'spacemacs/scroll-transient-state/evil-scroll-right
+    ;; lines and columns
+    "Nj" 'spacemacs/scroll-transient-state/evil-scroll-line-down
+    "Nk" 'spacemacs/scroll-transient-state/evil-scroll-line-up
+    "Nh" 'spacemacs/scroll-transient-state/evil-scroll-column-left
+    "Nl" 'spacemacs/scroll-transient-state/evil-scroll-column-right)
 
   ;; pasting transient-state
   (evil-define-command spacemacs//transient-state-0 ()

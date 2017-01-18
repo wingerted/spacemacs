@@ -1,6 +1,6 @@
 ;;; core-configuration-layer.el --- Spacemacs Core File
 ;;
-;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2017 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -60,6 +60,14 @@ ROOT is returned."
                               emacs-minor-version)
                     (eval dotspacemacs-elpa-subdirectory))))
       (file-name-as-directory (expand-file-name subdir root)))))
+
+(defun configuration-layer/get-elpa-package-install-directory (pkg)
+  "Return the install directory of elpa PKG. Return nil if it is not found."
+  (let ((elpa-dir package-user-dir))
+    (when (file-exists-p elpa-dir)
+      (let* ((pkg-match (concat "\\`" (symbol-name pkg) "-[0-9]+"))
+             (dir (car (directory-files elpa-dir 'full pkg-match))))
+        (when dir (file-name-as-directory dir))))))
 
 (defvar configuration-layer-rollback-directory
   (concat spacemacs-cache-directory ".rollback/")
@@ -889,11 +897,17 @@ Return nil if package object is not found."
   "Return a sorted list of PACKAGES objects."
   (sort packages (lambda (x y) (string< (symbol-name x) (symbol-name y)))))
 
-(defun configuration-layer/make-all-packages (&optional usedp)
-  "Create objects for _all_ packages.
-USEDP if non-nil indicates that made packages are used packages."
-  (configuration-layer/make-packages-from-layers
-   (configuration-layer/get-layers-list) usedp))
+(defun configuration-layer/make-all-packages (&optional skip-layer-discovery)
+  "Create objects for _all_ packages supported by Spacemacs.
+If SKIP-LAYER-DISCOVERY is non-nil then do not check for new layers."
+  (let ((all-layers (configuration-layer/get-layers-list))
+        (configuration-layer--load-packages-files t)
+        (configuration-layer--package-properties-read-onlyp t)
+        (configuration-layer--inhibit-warnings t))
+    (unless skip-layer-discovery
+      (configuration-layer/discover-layers))
+    (configuration-layer/declare-layers all-layers)
+    (configuration-layer/make-packages-from-layers all-layers)))
 
 (defun configuration-layer/make-packages-from-layers
     (layer-names &optional usedp)
@@ -1120,8 +1134,10 @@ Returns nil if the directory is not a category."
                         (oset indexed-layer :dir sub))
                     (spacemacs-buffer/message
                      "-> Discovered configuration layer: %s" layer-name-str)
-                    (configuration-layer//add-layer
-                     (configuration-layer/make-layer layer-name nil nil sub)))))
+                    (let ((configuration-layer--load-packages-files nil))
+                      (configuration-layer//add-layer
+                       (configuration-layer/make-layer layer-name
+                                                       nil nil sub))))))
                (t
                 ;; layer not found, add it to search path
                 (setq search-paths (cons sub search-paths)))))))))))
@@ -1777,9 +1793,11 @@ to select one."
   (unless (memq pkg package-activated-list)
     (package-activate pkg)))
 
-(defun configuration-layer//get-packages-dependencies ()
-  "Returns dependencies hash map for all packages in `package-alist'."
-  (let ((result (make-hash-table :size 512)))
+(defun configuration-layer//get-packages-upstream-dependencies-from-alist ()
+  "Returns upsteam dependencies hash map for all packages in `package-alist'.
+The keys are package names and the values are lists of package names that
+depends on it."
+  (let ((result (make-hash-table :size 1024)))
     (dolist (pkg package-alist)
       (let* ((pkg-sym (car pkg))
              (deps (configuration-layer//get-package-deps-from-alist pkg-sym)))
@@ -1791,7 +1809,7 @@ to select one."
                      result)))))
     result))
 
-(defun configuration-layer//get-implicit-packages (packages)
+(defun configuration-layer//get-implicit-packages-from-alist (packages)
   "Returns packages in `packages-alist' which are not found in PACKAGES."
   (let (imp-pkgs)
     (dolist (pkg package-alist)
@@ -1884,9 +1902,11 @@ to select one."
 (defun configuration-layer/delete-orphan-packages (packages)
   "Delete PACKAGES if they are orphan."
   (interactive)
-  (let* ((dependencies (configuration-layer//get-packages-dependencies))
-         (implicit-packages (configuration-layer//get-implicit-packages
-                             packages))
+  (let* ((dependencies
+          (configuration-layer//get-packages-upstream-dependencies-from-alist))
+         (implicit-packages
+          (configuration-layer//get-implicit-packages-from-alist
+           packages))
          (orphans (configuration-layer//get-orphan-packages
                    packages
                    implicit-packages
@@ -2011,7 +2031,8 @@ FILE-TO-LOAD is an explicit file to load after the installation."
       ;; not installed, we try to initialize package.el only if required to
       ;; precious seconds during boot time
       (require 'cl)
-      (let ((pkg-elpa-dir (spacemacs//get-package-directory pkg)))
+      (let ((pkg-elpa-dir
+             (configuration-layer/get-elpa-package-install-directory pkg)))
         (if pkg-elpa-dir
             (add-to-list 'load-path pkg-elpa-dir)
           ;; install the package
@@ -2021,11 +2042,103 @@ FILE-TO-LOAD is an explicit file to load after the installation."
             (spacemacs//redisplay))
           (configuration-layer/retrieve-package-archives 'quiet)
           (package-install pkg)
-          (setq pkg-elpa-dir (spacemacs//get-package-directory pkg)))
+          (setq pkg-elpa-dir
+                (configuration-layer/get-elpa-package-install-directory pkg)))
         (require pkg nil 'noerror)
         (when file-to-load
           (load-file (concat pkg-elpa-dir file-to-load)))
         pkg-elpa-dir))))
+
+(defun configuration-layer//get-indexed-elpa-package-names ()
+  "Return a list of all ELPA packages in indexed packages and dependencies."
+  (let (result)
+    (dolist (pkg-sym (configuration-layer//get-distant-packages
+                      (ht-keys configuration-layer--indexed-packages) nil))
+      (when (assq pkg-sym package-archive-contents)
+        (let* ((deps (mapcar 'car
+                             (configuration-layer//get-package-deps-from-archive
+                              pkg-sym)))
+               (elpa-deps (configuration-layer/filter-objects
+                           deps (lambda (x)
+                                  (assq x package-archive-contents)))))
+          (dolist (pkg (cons pkg-sym elpa-deps))
+            ;; avoid duplicates
+            (add-to-list 'result pkg)))))
+    result))
+
+(defun configuration-layer//create-archive-contents-item (pkg-name)
+  "Return an item with an ELPA archive-contents compliant format."
+  (let ((obj (cadr (assq pkg-name package-archive-contents))))
+    (cons pkg-name `[,(package-desc-version obj)
+                     ,(package-desc-reqs obj)
+                     ,(package-desc-summary obj)
+                     ,(package-desc-kind obj)
+                     ,(package-desc-extras obj)])))
+
+(defun configuration-layer//download-elpa-file
+    (pkg-name filename archive-url output-dir
+              &optional signaturep readmep)
+  "Download FILENAME from distant ELPA repository to OUTPUT-DIR.
+
+Original code from dochang at https://github.com/dochang/elpa-clone"
+  (let ((source (concat archive-url filename))
+        (target (expand-file-name filename output-dir)))
+    (unless (file-exists-p target)
+      (let* ((readme-filename (format "%S-readme.txt" pkg-name))
+             (source-readme (concat archive-url readme-filename)))
+        (when (and readmep (url-http-file-exists-p source-readme))
+          (url-copy-file source-readme
+                         (expand-file-name readme-filename output-dir)
+                         'ok-if-already-exists)))
+      (when signaturep
+        (let* ((sig-filename (concat filename ".sig"))
+               (source-sig (concat archive-url sig-filename))
+               (target-sig (expand-file-name sig-filename output-dir)))
+          (url-copy-file source-sig target-sig 'ok-if-already-exists)))
+      (url-copy-file source target))))
+
+(defun configuration-layer//sync-elpa-packages-files (packages output-dir)
+  "Synchronize PACKAGES files from remote ELPA directory to OUTPUT-DIR"
+  (message "Synchronizing files in ELPA repository at %s..." output-dir)
+  (let (filenames
+        (output-filenames (directory-files
+                           output-dir nil "\\.\\(el\\|tar\\)$"))
+        (pkg-count (length packages))
+        (i 1))
+    (dolist (pkg-name packages)
+      (let* ((obj (cadr (assq pkg-name package-archive-contents)))
+             (filename (concat (package-desc-full-name obj)
+                               (package-desc-suffix obj)))
+             (archive-url (cdr (assq (package-desc-archive obj)
+                                     package-archives))))
+        (push filename filenames)
+        (if (member filename output-filenames)
+            (message "[%s/%s] Skip %s..." i pkg-count filename)
+          (message "[%s/%s] Download %s..." i pkg-count filename)
+          (configuration-layer//download-elpa-file
+           pkg-name filename archive-url output-dir))
+        (setq i (1+ i))))
+    (dolist (ofilename output-filenames)
+      (unless (member ofilename filenames)
+        (message "Remove outdated %s..." ofilename)
+        (delete-file (concat output-dir ofilename))))))
+
+(defun configuration-layer/create-elpa-repository (name output-dir)
+  "Create an ELPA repository containing all packages supported by Spacemacs."
+  (configuration-layer/make-all-packages 'no-discover)
+  (let* ((packages (configuration-layer//get-indexed-elpa-package-names))
+         (archive-contents
+          (mapcar 'configuration-layer//create-archive-contents-item
+                  packages))
+         (path (file-name-as-directory (concat output-dir name))))
+    (unless (file-exists-p path) (make-directory path 'create-parents))
+    (configuration-layer//sync-elpa-packages-files packages path)
+    (push 1 archive-contents)
+    (with-current-buffer (find-file-noselect
+                          (concat path "archive-contents"))
+      (erase-buffer)
+      (prin1 archive-contents (current-buffer))
+      (save-buffer))))
 
 (defun configuration-layer//increment-error-count ()
   "Increment the error counter."

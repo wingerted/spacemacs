@@ -1,6 +1,6 @@
 ;;; packages.el --- Python Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2017 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -80,7 +80,7 @@
   (use-package company-anaconda
     :defer t
     :init (spacemacs|add-company-backends
-            :backends 'company-anaconda
+            :backends company-anaconda
             :modes python-mode)))
 
 (defun python/init-cython-mode ()

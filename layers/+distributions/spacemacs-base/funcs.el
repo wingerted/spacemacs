@@ -1,6 +1,6 @@
 ;;; funcs.el --- Spacemacs Base Layer functions File
 ;;
-;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2017 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -212,16 +212,6 @@ Dedicated (locked) windows are left untouched."
   (interactive "p")
   (spacemacs/rotate-windows-forward (* -1 count)))
 
-;; Note that this duplicates code from select-window-by-number, ideally should
-;; upstream this function into windows.el
-(defun spacemacs/get-window-by-number (i)
-  (let ((windows (car (gethash (selected-frame) window-numbering-table)))
-        window)
-    (if (and (>= i 0) (< i 10)
-             (setq window (aref windows i)))
-        window
-      (error "No window numbered %s" i))))
-
 (defun spacemacs/move-buffer-to-window (windownum follow-focus-p)
   "Moves a buffer to a window, using the spacemacs numbering. follow-focus-p
    controls whether focus moves to new window (with buffer), or stays on
@@ -229,12 +219,12 @@ Dedicated (locked) windows are left untouched."
   (interactive)
   (let ((b (current-buffer))
         (w1 (selected-window))
-        (w2 (spacemacs/get-window-by-number windownum)))
+        (w2 (winum-get-window-by-number windownum)))
     (unless (eq w1 w2)
       (set-window-buffer w2 b)
       (switch-to-prev-buffer)
       (unrecord-window-buffer w1 b)))
-  (when follow-focus-p (select-window (spacemacs/get-window-by-number windownum))))
+  (when follow-focus-p (select-window (winum-get-window-by-number windownum))))
 
 (defun spacemacs/swap-buffers-to-window (windownum follow-focus-p)
   "Swaps visible buffers between active window and selected window.
@@ -243,7 +233,7 @@ Dedicated (locked) windows are left untouched."
   (interactive)
   (let* ((b1 (current-buffer))
          (w1 (selected-window))
-         (w2 (spacemacs/get-window-by-number windownum))
+         (w2 (winum-get-window-by-number windownum))
          (b2 (window-buffer w2)))
     (unless (eq w1 w2)
       (set-window-buffer w1 b2)
@@ -825,22 +815,44 @@ With negative N, comment out original line and use the absolute value."
         (forward-char pos)))))
 
 (defun spacemacs/uniquify-lines ()
-  "Remove duplicate adjacent lines in region or current buffer"
+  "Remove duplicate adjacent lines in a region or the current buffer"
   (interactive)
   (save-excursion
     (save-restriction
-      (let ((beg (if (region-active-p) (region-beginning) (point-min)))
-            (end (if (region-active-p) (region-end) (point-max))))
+      (let* ((region-active (or (region-active-p) (evil-visual-state-p)))
+             (beg (if region-active (region-beginning) (point-min)))
+             (end (if region-active (region-end) (point-max))))
         (goto-char beg)
         (while (re-search-forward "^\\(.*\n\\)\\1+" end t)
           (replace-match "\\1"))))))
 
-(defun spacemacs/sort-lines ()
-  "Sort lines in region or current buffer"
+(defun spacemacs/sort-lines (&optional reverse)
+  "Sort lines in a region or the current buffer.
+A non-nil argument sorts in reverse order."
+  (interactive "P")
+  (let* ((region-active (or (region-active-p) (evil-visual-state-p)))
+         (beg (if region-active (region-beginning) (point-min)))
+         (end (if region-active (region-end) (point-max))))
+    (sort-lines reverse beg end)))
+
+(defun spacemacs/sort-lines-reverse ()
+  "Sort lines in reverse order, in a region or the current buffer."
   (interactive)
-  (let ((beg (if (region-active-p) (region-beginning) (point-min)))
-        (end (if (region-active-p) (region-end) (point-max))))
-    (sort-lines nil beg end)))
+  (spacemacs/sort-lines -1))
+
+(defun spacemacs/sort-lines-by-column (&optional reverse)
+  "Sort lines by the selected column.
+A non-nil argument sorts in reverse order."
+  (interactive "P")
+  (let* ((region-active (or (region-active-p) (evil-visual-state-p)))
+         (beg (if region-active (region-beginning) (point-min)))
+         (end (if region-active (region-end) (point-max))))
+    (sort-columns reverse beg end)))
+
+(defun spacemacs/sort-lines-by-column-reverse ()
+  "Sort lines by the selected column in reverse order."
+  (interactive)
+  (spacemacs/sort-lines-by-column -1))
 
 ;; BEGIN linum mouse helpers
 
@@ -988,15 +1000,28 @@ a split-side entry, its value must be usable as the SIDE argument for
   (let ((buffer (find-file-noselect file)))
     (pop-to-buffer buffer '(spacemacs//display-in-split (split-side . below)))))
 
-(defun spacemacs/switch-to-scratch-buffer ()
-  "Switch to the `*scratch*' buffer. Create it first if needed."
-  (interactive)
+(defun spacemacs/switch-to-scratch-buffer (&optional arg)
+  "Switch to the `*scratch*' buffer, creating it first if needed.
+if prefix argument ARG is given, switch to it in an other, possibly new window."
+  (interactive "P")
   (let ((exists (get-buffer "*scratch*")))
-    (switch-to-buffer (get-buffer-create "*scratch*"))
+    (if arg
+        (switch-to-buffer-other-window (get-buffer-create "*scratch*"))
+      (switch-to-buffer (get-buffer-create "*scratch*")))
     (when (and (not exists)
                (not (eq major-mode dotspacemacs-scratch-mode))
                (fboundp dotspacemacs-scratch-mode))
       (funcall dotspacemacs-scratch-mode))))
+
+(defun spacemacs/switch-to-messages-buffer (&optional arg)
+  "Switch to the `*Messages*' buffer.
+if prefix argument ARG is given, switch to it in an other, possibly new window."
+  (interactive "P")
+  (with-current-buffer (messages-buffer)
+    (goto-char (point-max))
+    (if arg
+        (switch-to-buffer-other-window (current-buffer))
+      (switch-to-buffer (current-buffer)))))
 
 (defun spacemacs/close-compilation-window ()
   "Close the window containing the '*compilation*' buffer."

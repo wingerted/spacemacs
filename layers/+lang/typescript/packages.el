@@ -1,6 +1,6 @@
 ;;; packages.el --- typescript Layer packages File for Spacemacs
 ;;
-;; Copyright (c) 2012-2016 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2017 Sylvain Benner & Contributors
 ;;
 ;; Author: Chris Bowdon <c.bowdon@bath.edu>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -25,7 +25,7 @@
       :backends company-tide
       :modes typescript-mode)))
 
-(defun php/post-init-eldoc ()
+(defun typescript/post-init-eldoc ()
   (add-hook 'typescript-mode-hook 'eldoc-mode))
 
 (defun typescript/post-init-flycheck ()
